@@ -1,8 +1,8 @@
 {
-  "name": "CardNote",
+  "name": "siyuan-card-note",
   "author": "onebean",
-  "url": "https://github.com/onebean/siyuan-card-note",
-  "version": "0.1.0",
+  "url": "https://github.com/yisili-kk/siyuan-card-note",
+  "version": "0.1.1",
   "minAppVersion": "3.3.0",
   "backends": [
     "all"
