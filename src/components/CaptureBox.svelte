@@ -48,7 +48,9 @@
 
   $: content = blocksToMarkdown(blocks);
   $: activeBlock = blocks.find((block) => block.id === activeBlockId) || blocks[0];
-  $: canSubmit = Boolean(titleValue.trim() || content.trim());
+  $: draftTitle = titleValue.trim();
+  $: draftContent = content.trim();
+  $: canSubmit = Boolean(draftTitle || draftContent);
 
   $: if (title !== lastTitle) {
     titleValue = title;
@@ -118,6 +120,9 @@
   }
 
   function submit() {
+    if (busy || uploading || !canSubmit) {
+      return;
+    }
     const nextContent = blocksToMarkdown(blocks);
     dispatch("submit", {
       title: titleValue,
@@ -151,6 +156,10 @@
     if (!composing) {
       pushHistory();
     }
+  }
+
+  function updateTitle(value: string) {
+    titleValue = value;
   }
 
   function toggleCheck(block: EditorBlock) {
@@ -453,9 +462,10 @@
     <input
       class="scn-capture__title"
       type="text"
-      bind:value={titleValue}
+      value={titleValue}
       placeholder="请输入标题"
       disabled={busy}
+      on:input={(event) => updateTitle(event.currentTarget.value)}
     />
   {/if}
 
