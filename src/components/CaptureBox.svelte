@@ -39,6 +39,7 @@
   let expanded = Boolean(title);
   let uploading = false;
   let fileInput: HTMLInputElement;
+  let titleInput: HTMLInputElement;
   let activeBlockId = "";
   let blocks: EditorBlock[] = markdownToBlocks(value);
   let history: string[] = [value];
@@ -48,10 +49,6 @@
 
   $: content = blocksToMarkdown(blocks);
   $: activeBlock = blocks.find((block) => block.id === activeBlockId) || blocks[0];
-  $: draftTitle = titleValue.trim();
-  $: draftContent = content.trim();
-  $: canSubmit = Boolean(draftTitle || draftContent);
-
   $: if (title !== lastTitle) {
     titleValue = title;
     lastTitle = title;
@@ -120,12 +117,13 @@
   }
 
   function submit() {
-    if (busy || uploading || !canSubmit) {
+    if (busy || uploading) {
       return;
     }
+    const nextTitle = titleInput?.value ?? titleValue;
     const nextContent = blocksToMarkdown(blocks);
     dispatch("submit", {
-      title: titleValue,
+      title: nextTitle,
       content: nextContent
     });
     if (!editing) {
@@ -460,6 +458,7 @@
 
   {#if expanded}
     <input
+      bind:this={titleInput}
       class="scn-capture__title"
       type="text"
       value={titleValue}
@@ -541,7 +540,7 @@
     {#if editing}
       <button class="b3-button b3-button--outline" type="button" on:click={() => dispatch("cancel")} disabled={busy}>取消</button>
     {/if}
-    <button class="scn-send-button" type="button" title="保存卡片" on:click={submit} disabled={busy || uploading || !canSubmit}>
+    <button class="scn-send-button" type="button" title="保存卡片" on:click={submit} disabled={busy || uploading}>
       {editing ? "保存" : uploading ? "上传中" : "保存"}
     </button>
   </div>
