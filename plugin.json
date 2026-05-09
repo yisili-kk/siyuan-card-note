@@ -1,0 +1,33 @@
+{
+  "name": "CardNote",
+  "author": "onebean",
+  "url": "https://github.com/onebean/siyuan-card-note",
+  "version": "0.1.0",
+  "minAppVersion": "3.3.0",
+  "backends": [
+    "all"
+  ],
+  "frontends": [
+    "all"
+  ],
+  "disabledInPublish": false,
+  "displayName": {
+    "default": "CardNote",
+    "zh_CN": "CardNote"
+  },
+  "description": {
+    "default": "Capture lightweight Markdown card notes and optionally sync them to today's daily note.",
+    "zh_CN": "快速记录 Markdown 卡片笔记，并可选同步到今日日记。"
+  },
+  "readme": {
+    "default": "README.md",
+    "zh_CN": "README_zh_CN.md"
+  },
+  "keywords": [
+    "card note",
+    "markdown",
+    "daily note",
+    "卡片笔记",
+    "日记"
+  ]
+}

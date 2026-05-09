@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 768">
+  <rect width="1024" height="768" fill="#f6f7f7"/>
+  <rect x="48" y="48" width="240" height="672" fill="#eef3f2"/>
+  <rect x="320" y="48" width="656" height="88" rx="10" fill="#ffffff" stroke="#d6dfdd"/>
+  <rect x="320" y="160" width="656" height="180" rx="10" fill="#ffffff" stroke="#d6dfdd"/>
+  <rect x="320" y="364" width="312" height="168" rx="10" fill="#ffffff" stroke="#d6dfdd"/>
+  <rect x="664" y="364" width="312" height="168" rx="10" fill="#ffffff" stroke="#d6dfdd"/>
+  <rect x="320" y="556" width="656" height="164" rx="10" fill="#ffffff" stroke="#d6dfdd"/>
+  <text x="82" y="98" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#2f80ed">CardNote</text>
+  <rect x="80" y="142" width="176" height="38" rx="8" fill="#ffffff" stroke="#d6dfdd"/>
+  <text x="96" y="168" font-family="Arial, sans-serif" font-size="18" fill="#7a8582">搜索内容或标签</text>
+  <rect x="80" y="218" width="176" height="36" rx="8" fill="#e8f2ff"/>
+  <text x="96" y="242" font-family="Arial, sans-serif" font-size="18" fill="#2f80ed">全部卡片</text>
+  <text x="80" y="304" font-family="Arial, sans-serif" font-size="18" fill="#2f80ed">#阅读</text>
+  <text x="80" y="342" font-family="Arial, sans-serif" font-size="18" fill="#2f80ed">#灵感</text>
+  <text x="80" y="380" font-family="Arial, sans-serif" font-size="18" fill="#2f80ed">#项目</text>
+  <text x="348" y="104" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#1f2d2a">卡片笔记</text>
+  <text x="348" y="215" font-family="Arial, sans-serif" font-size="24" fill="#1f2d2a">记录一张卡片，支持 Markdown 和 #标签#</text>
+  <line x1="348" y1="246" x2="880" y2="246" stroke="#d6dfdd" stroke-width="4"/>
+  <line x1="348" y1="284" x2="724" y2="284" stroke="#d6dfdd" stroke-width="4"/>
+  <text x="348" y="416" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d2a">读书摘记</text>
+  <text x="348" y="460" font-family="Arial, sans-serif" font-size="18" fill="#485450">将高价值想法拆成小卡片。</text>
+  <text x="692" y="416" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d2a">项目想法</text>
+  <text x="692" y="460" font-family="Arial, sans-serif" font-size="18" fill="#485450">同步到今日日记并保留块绑定。</text>
+  <text x="348" y="614" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d2a">Markdown 卡片预览</text>
+  <text x="348" y="656" font-family="Arial, sans-serif" font-size="18" fill="#485450">搜索、标签筛选、编辑、删除和手动同步都在一个界面完成。</text>
+</svg>

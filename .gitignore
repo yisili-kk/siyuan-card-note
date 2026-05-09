@@ -1,0 +1,48 @@
+# Ignore everything by default. This repo should only publish the plugin
+# source, build/install assets, and package metadata.
+*
+
+# Git metadata
+!.gitignore
+
+# Plugin metadata and install artifacts
+!plugin.json
+!package.json
+!pnpm-lock.yaml
+!package.zip
+!README.md
+!README_zh_CN.md
+
+# Build and TypeScript config
+!svelte.config.js
+!tsconfig.json
+!tsconfig.node.json
+!vite.config.ts
+
+# Plugin assets
+!icon.png
+!icon.svg
+!preview.png
+!preview.svg
+
+# Runtime source and localization
+!src/
+!src/**
+!public/
+!public/**
+
+# Build/package scripts
+!scripts/
+!scripts/**
+
+# Prebuilt plugin output for direct installation
+!dist/
+!dist/**
+
+# Explicitly keep non-install/development material ignored
+docs/
+test-harness/
+vite.test.config.ts
+node_modules/
+.pnpm-store/
+.DS_Store
