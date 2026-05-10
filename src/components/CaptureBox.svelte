@@ -519,14 +519,11 @@
   </div>
 
   <div class="scn-capture__toolbar">
-    <button class="scn-tool-button" type="button" title="撤销" on:click={undo} disabled={historyIndex <= 0}>↶</button>
-    <button class="scn-tool-button" type="button" title="重做" on:click={redo} disabled={historyIndex >= history.length - 1}>↷</button>
     <button class="scn-tool-button" type="button" title="标签" on:click={() => insertInline("#标签# ")}>#</button>
     <button class="scn-tool-button" type="button" title="加粗 Ctrl/⌘+B" on:click={() => wrapSelection("**")}>B</button>
     <button class:scn-tool-button--active={activeBlock?.type === "bullet"} class="scn-tool-button" type="button" title="无序列表" on:click={() => setBlockType(activeBlock, "bullet")}>☷</button>
     <button class:scn-tool-button--active={activeBlock?.type === "ordered"} class="scn-tool-button" type="button" title="有序列表" on:click={() => setBlockType(activeBlock, "ordered")}>☰</button>
     <button class:scn-tool-button--active={activeBlock?.type === "todo"} class="scn-tool-button" type="button" title="待办" on:click={() => setBlockType(activeBlock, "todo")}>☑</button>
-    <button class="scn-tool-button" type="button" title="强调" on:click={() => setBlockType(activeBlock, "quote")}>!</button>
     <label class="b3-button b3-button--outline scn-file-button" title="上传图片">
       图
       <input

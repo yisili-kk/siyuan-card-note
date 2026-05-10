@@ -537,15 +537,59 @@
   font-size: 12px;
 }
 
+.scn-daily-review__track-wrap {
+  position: relative;
+}
+
+.scn-daily-review__nav {
+  position: absolute;
+  z-index: 3;
+  top: calc(50% - 7px);
+  display: grid;
+  width: 30px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(202, 214, 229, 0.9);
+  border-radius: 999px;
+  color: #5b7ca5;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 18px rgba(31, 47, 70, 0.12);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.scn-daily-review__nav:hover {
+  color: var(--scn-blue);
+  border-color: color-mix(in srgb, var(--scn-blue) 42%, transparent);
+  background: #fff;
+}
+
+.scn-daily-review__nav--left {
+  left: 10px;
+}
+
+.scn-daily-review__nav--right {
+  right: 10px;
+}
+
 .scn-daily-review__track {
   display: flex;
   gap: 12px;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0 14px 14px;
+  padding: 2px 28px 16px;
+  scroll-padding-inline: 28px;
   scroll-snap-type: x mandatory;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+.scn-daily-review__track::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .scn-daily-review-card {
@@ -743,7 +787,7 @@
 }
 
 .scn-capture--expanded {
-  min-height: min(560px, calc(100vh - 180px));
+  min-height: 0;
 }
 
 .scn-capture__expand {
@@ -805,7 +849,7 @@
 }
 
 .scn-capture--expanded .scn-capture__editor {
-  min-height: 300px;
+  min-height: 138px;
   border-radius: 0 !important;
 }
 
