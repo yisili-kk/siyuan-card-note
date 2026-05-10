@@ -5,11 +5,18 @@
   import type { Plugin } from "siyuan";
   import type { CardDraft, CardNote, PluginSettings } from "../lib/types";
 
+  const INITIAL_CARD_COUNT = 30;
+  const CARD_BATCH_SIZE = 30;
+
   export let plugin: Plugin;
   export let cards: CardNote[] = [];
   export let viewMode: PluginSettings["viewMode"] = "list";
   export let selectedId = "";
   export let busy = false;
+
+  let listElement: HTMLElement;
+  let visibleCount = INITIAL_CARD_COUNT;
+  let previousCardIds = "";
 
   const dispatch = createEventDispatcher<{
     view: CardNote;
@@ -26,13 +33,56 @@
     finishNativeEdit: CardNote;
     openNativeTab: CardNote;
   }>();
+
+  $: cardIds = cards.map((card) => card.id).join("|");
+  $: if (cardIds !== previousCardIds) {
+    previousCardIds = cardIds;
+    visibleCount = Math.min(cards.length, INITIAL_CARD_COUNT);
+  }
+  $: selectedIndex = selectedId ? cards.findIndex((card) => card.id === selectedId) : -1;
+  $: if (selectedIndex >= visibleCount) {
+    visibleCount = Math.min(cards.length, selectedIndex + 1);
+  }
+  $: visibleCards = cards.slice(0, visibleCount);
+  $: hasMoreCards = visibleCount < cards.length;
+
+  function loadMoreCards() {
+    if (!hasMoreCards) {
+      return;
+    }
+    visibleCount = Math.min(cards.length, visibleCount + CARD_BATCH_SIZE);
+  }
+
+  function loadMoreOnIntersect(node: HTMLElement) {
+    if (typeof IntersectionObserver === "undefined") {
+      loadMoreCards();
+      return {};
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        loadMoreCards();
+      }
+    }, {
+      root: listElement,
+      rootMargin: "360px 0px",
+      threshold: 0.01
+    });
+
+    observer.observe(node);
+    return {
+      destroy() {
+        observer.disconnect();
+      }
+    };
+  }
 </script>
 
-<section class:scn-card-list--grid={viewMode === "card"} class="scn-card-list">
+<section bind:this={listElement} class:scn-card-list--grid={viewMode === "card"} class="scn-card-list">
   {#if cards.length === 0}
     <div class="scn-empty">暂无卡片</div>
   {:else}
-    {#each cards as card (card.id)}
+    {#each visibleCards as card (card.id)}
       {#if selectedId === card.id}
         <div class="scn-card-editor">
           <ProtyleCardEditor
@@ -61,5 +111,10 @@
         />
       {/if}
     {/each}
+    {#if hasMoreCards}
+      <div class="scn-card-list__loader" use:loadMoreOnIntersect>
+        <span>继续加载</span>
+      </div>
+    {/if}
   {/if}
 </section>

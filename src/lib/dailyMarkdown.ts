@@ -22,7 +22,32 @@ function normalizeTitle(value: string | undefined): string {
 }
 
 function indentMarkdown(markdown: string): string {
-  return markdown.split(/\r?\n/).map((line) => line ? `  ${line}` : "  ").join("\n");
+  const lines = markdown.split(/\r?\n/);
+  const output: string[] = [];
+  let inFence = false;
+
+  lines.forEach((line, index) => {
+    output.push(line ? `  ${line}` : "  ");
+    if (index >= lines.length - 1) {
+      return;
+    }
+
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+    }
+    const nextLine = lines[index + 1];
+    const separatesParagraphs = !inFence && isPlainParagraphLine(line) && isPlainParagraphLine(nextLine);
+    if (separatesParagraphs) {
+      output.push("");
+    }
+  });
+
+  return output.join("\n");
+}
+
+function isPlainParagraphLine(line: string): boolean {
+  const trimmed = line.trim();
+  return Boolean(trimmed) && !/^(```|#{1,6}\s+|[-*]\s+|\d+\.\s+|>\s?|!\[[^\]]*\]\([^)]+\))/u.test(trimmed);
 }
 
 function normalizeSiyuanTags(markdown: string): string {

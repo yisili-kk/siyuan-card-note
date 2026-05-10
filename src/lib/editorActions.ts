@@ -107,6 +107,11 @@ export function backspaceAtBlockStart(blocks: EditorBlock[], blockId: string): E
   }
 
   const previous = next[index - 1];
+  if (previous.type === "image") {
+    next.splice(index - 1, 1);
+    return { blocks: next, focusId: block.id, focusOffset: 0, handled: true };
+  }
+
   const focusOffset = previous.text.length;
   previous.text += block.text;
   next.splice(index, 1);
@@ -182,6 +187,23 @@ export function insertBlocksAfter(blocks: EditorBlock[], blockId: string, nextBl
   const index = Math.max(0, blockIndex(blocks, blockId));
   const next = [...blocks.slice(0, index + 1), ...nextBlocks, ...blocks.slice(index + 1)];
   const focus = nextBlocks[0] || blocks[index];
+  return { blocks: next, focusId: focus.id, focusOffset: focus.text.length, handled: true };
+}
+
+export function deleteEditorBlock(blocks: EditorBlock[], blockId: string): EditorActionResult {
+  const index = blockIndex(blocks, blockId);
+  if (index < 0) {
+    return unchanged(blocks, blockId, 0);
+  }
+
+  const next = cloneBlocks(blocks);
+  next.splice(index, 1);
+  if (next.length === 0) {
+    const empty = createEditorBlock();
+    return { blocks: [empty], focusId: empty.id, focusOffset: 0, handled: true };
+  }
+
+  const focus = next[Math.min(index, next.length - 1)];
   return { blocks: next, focusId: focus.id, focusOffset: focus.text.length, handled: true };
 }
 

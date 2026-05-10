@@ -46,6 +46,7 @@
   let backupCount = 0;
   let busy = false;
   let error = "";
+  let appendIdeaQueue: Promise<void> = Promise.resolve();
 
   $: tags = getAllTags(cards);
   $: filteredCards = filterCards(cards, keyword, selectedTag, statusFilter, timeFilter, settings.sortMode);
@@ -479,10 +480,22 @@
     }
   }
 
-  async function appendReviewIdea(event: CustomEvent<{ card: CardNote; idea: string; markReviewed?: boolean }>) {
-    const card = event.detail.card;
-    const idea = event.detail.idea.trim();
-    const markReviewed = event.detail.markReviewed !== false;
+  function appendReviewIdea(event: CustomEvent<{ card: CardNote; idea: string; markReviewed?: boolean }>) {
+    const detail = {
+      card: event.detail.card,
+      idea: event.detail.idea,
+      markReviewed: event.detail.markReviewed
+    };
+    appendIdeaQueue = appendIdeaQueue
+      .catch(() => undefined)
+      .then(() => appendReviewIdeaNow(detail));
+    void appendIdeaQueue;
+  }
+
+  async function appendReviewIdeaNow(detail: { card: CardNote; idea: string; markReviewed?: boolean }) {
+    const card = cards.find((item) => item.id === detail.card.id) || detail.card;
+    const idea = detail.idea.trim();
+    const markReviewed = detail.markReviewed !== false;
     if (!idea) {
       showMessage("请输入想法内容", 3000);
       return;
@@ -514,6 +527,9 @@
       cards = cards.map((item) => item.id === finalCard.id ? finalCard : item);
       if (detailCard?.id === finalCard.id) {
         detailCard = finalCard;
+      }
+      if (editingCard?.id === finalCard.id) {
+        editingCard = finalCard;
       }
       await saveCards(plugin, cards);
       if (markReviewed) {

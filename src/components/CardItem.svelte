@@ -70,6 +70,7 @@
       <div class="scn-card__time">{created}</div>
     </div>
     <div class="scn-card__actions" role="group" aria-label="卡片操作" on:dblclick|stopPropagation>
+      <button type="button" title="阅读" on:click={() => dispatch("view", card)}>□</button>
       <button type="button" title="置顶" on:click={() => dispatch("pin", card)}>{card.pinned ? "★" : "☆"}</button>
       <button type="button" title="编辑" on:click={() => dispatch("edit", card)}>✎</button>
       <button class="scn-danger" type="button" title="删除" on:click={() => dispatch("delete", card)}>×</button>

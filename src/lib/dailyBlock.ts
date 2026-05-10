@@ -63,12 +63,34 @@ export function toSyncConflict(result: DailyBlockConflictResult): CardSyncConfli
 }
 
 export function normalizeMarkdown(markdown: string): string {
-  return stripKramdownAttrs(markdown)
+  const lines = stripKramdownAttrs(markdown)
     .split(/\r?\n/)
     .map((line) => line.replace(/[ \t]+$/g, ""))
+    .filter((line) => !/^[ \t]*>[ \t]*$/.test(line));
+
+  return removePlainChildBlockSeparators(lines)
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function removePlainChildBlockSeparators(lines: string[]): string[] {
+  return lines.filter((line, index) => {
+    if (line.trim()) {
+      return true;
+    }
+    const previous = lines[index - 1];
+    const next = lines[index + 1];
+    return !(isIndentedPlainLine(previous) && isIndentedPlainLine(next));
+  });
+}
+
+function isIndentedPlainLine(line: string | undefined): boolean {
+  if (!line || !/^(  |\t)/.test(line)) {
+    return false;
+  }
+  const trimmed = line.trim();
+  return Boolean(trimmed) && !/^(```|#{1,6}\s+|[-*]\s+|\d+\.\s+|>\s?|!\[[^\]]*\]\([^)]+\))/u.test(trimmed);
 }
 
 export function parseDailyBlock(kramdown: string): Omit<DailyBlockDraft, "markdown"> {

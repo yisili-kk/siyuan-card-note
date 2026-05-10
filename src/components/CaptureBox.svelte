@@ -5,6 +5,7 @@
     applyShortcutToBlock,
     backspaceAtBlockStart,
     changeEditorBlockIndent,
+    deleteEditorBlock,
     insertBlocksAfter as insertEditorBlocksAfter,
     pasteMarkdownIntoBlock,
     setEditorBlockType,
@@ -46,6 +47,7 @@
   let historyIndex = 0;
   let composing = false;
   let blockRefs: Record<string, HTMLElement> = {};
+  let imageRefs: Record<string, HTMLButtonElement> = {};
 
   $: content = blocksToMarkdown(blocks);
   $: activeBlock = blocks.find((block) => block.id === activeBlockId) || blocks[0];
@@ -305,6 +307,19 @@
     }
   }
 
+  function handleImageKeydown(event: KeyboardEvent, block: EditorBlock) {
+    activeBlockId = block.id;
+    if (event.key !== "Backspace" && event.key !== "Delete") {
+      return;
+    }
+    event.preventDefault();
+    deleteBlock(block);
+  }
+
+  function deleteBlock(block: EditorBlock) {
+    applyAction(deleteEditorBlock(blocks, block.id), true);
+  }
+
   function changeIndent(block: EditorBlock, delta: number) {
     const result = changeEditorBlockIndent(blocks, block.id, delta);
     if (result.handled) {
@@ -417,6 +432,12 @@
   }
 
   function focusBlock(id: string, offset?: number) {
+    const imageElement = imageRefs[id];
+    if (imageElement) {
+      imageElement.focus();
+      return;
+    }
+
     const element = blockRefs[id];
     if (!element) {
       return;
@@ -531,9 +552,22 @@
           {/if}
         </div>
         {#if block.type === "image" && block.src}
-          <button class="scn-editor-block__image" type="button" on:click={() => dispatch("previewImage", block.src || "")}>
-            <img src={block.src} alt={block.alt || "image"} />
-          </button>
+          <div
+            class="scn-editor-block__image-wrap"
+            aria-label="图片块"
+          >
+            <button
+              bind:this={imageRefs[block.id]}
+              class="scn-editor-block__image"
+              type="button"
+              on:focus={() => activeBlockId = block.id}
+              on:keydown={(event) => handleImageKeydown(event, block)}
+              on:click={() => dispatch("previewImage", block.src || "")}
+            >
+              <img src={block.src} alt={block.alt || "image"} />
+            </button>
+            <button class="scn-editor-block__image-delete" type="button" title="删除图片" aria-label="删除图片" on:click={() => deleteBlock(block)}>×</button>
+          </div>
         {:else}
           <div
             bind:this={blockRefs[block.id]}

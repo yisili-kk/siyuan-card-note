@@ -29,6 +29,7 @@ const {
   applyShortcutToBlock,
   backspaceAtBlockStart,
   changeEditorBlockIndent,
+  deleteEditorBlock,
   pasteMarkdownIntoBlock,
   setEditorBlockType,
   splitEditorBlock
@@ -143,5 +144,21 @@ assert.equal(
   ]),
   "- 第一条\n- 不能悬空缩进"
 );
+
+state = focusEnd(editor("前文\n![image](assets/test.png)\n后文"), 1);
+apply(state, deleteEditorBlock(state.blocks, state.focusId));
+assert.equal(blocksToMarkdown(state.blocks), "前文\n后文");
+assert.equal(state.blocks.find((block) => block.id === state.focusId)?.text, "后文");
+
+state = focusEnd(editor("![image](assets/test.png)"), 0);
+apply(state, deleteEditorBlock(state.blocks, state.focusId));
+assert.equal(blocksToMarkdown(state.blocks), "");
+assert.equal(state.blocks.length, 1);
+
+state = focusEnd(editor("前文\n![image](assets/test.png)\n后文"), 2);
+state.offset = 0;
+apply(state, backspaceAtBlockStart(state.blocks, state.focusId));
+assert.equal(blocksToMarkdown(state.blocks), "前文\n后文");
+assert.equal(state.blocks.find((block) => block.id === state.focusId)?.text, "后文");
 
 console.log("editor action tests passed");
