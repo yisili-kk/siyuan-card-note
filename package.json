@@ -1,6 +1,6 @@
 {
   "name": "siyuan-card-note",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "A lightweight card note capture plugin for SiYuan.",
   "type": "module",
   "scripts": {

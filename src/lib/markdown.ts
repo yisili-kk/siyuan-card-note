@@ -124,7 +124,7 @@ export function escapeHtml(value: string): string {
 
 export function firstLine(value: string): string {
   const line = value.trim().split(/\r?\n/).find(Boolean);
-  return line ? stripMarkdownPrefix(line) : "未命名卡片";
+  return line ? formatPlainTags(stripMarkdownPrefix(line)) : "未命名卡片";
 }
 
 function stripMarkdownPrefix(value: string): string {
@@ -143,7 +143,13 @@ function renderInline(value: string): string {
   const withImages = escaped.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy" />');
   const withBold = withImages.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   const withInlineCode = withBold.replace(/`([^`]+)`/g, "<code>$1</code>");
-  return withInlineCode.replace(/(^|\s)#([^#\s][^#\n]*?)(#|\s|$)/g, '$1<span class="scn-md-tag">#$2</span>$3');
+  return withInlineCode.replace(/(^|\s)#([^#\s][^#\n]*?)(#|\s|$)/g, (_match, prefix: string, tag: string, suffix: string) => {
+    return `${prefix}<span class="scn-md-tag">#${tag}</span>${suffix === "#" ? "" : suffix}`;
+  });
+}
+
+function formatPlainTags(value: string): string {
+  return value.replace(/(^|\s)#([^#\s][^#\n]*?)#(?=\s|$)/g, "$1#$2");
 }
 
 function renderReviewIdea(time: string, lines: string[]): string {

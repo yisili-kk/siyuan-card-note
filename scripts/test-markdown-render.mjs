@@ -25,4 +25,8 @@ assert.equal((html.match(/<blockquote>/g) || []).length, 0);
 const quoteHtml = renderMarkdownPreview("> 普通引用\n> 第二行");
 assert.equal((quoteHtml.match(/<blockquote>/g) || []).length, 2);
 
+const tagHtml = renderMarkdownPreview("#Tag/选题# 测试");
+assert.ok(tagHtml.includes('<span class="scn-md-tag">#Tag/选题</span> 测试'));
+assert.ok(!tagHtml.includes("#Tag/选题#"));
+
 console.log("markdown render tests passed");

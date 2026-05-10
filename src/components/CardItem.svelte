@@ -24,6 +24,7 @@
   let renderedCardId = "";
 
   $: html = renderMarkdownPreview(card.content);
+  $: hasTitle = Boolean(card.title?.trim());
   $: title = card.title?.trim() || firstLine(card.content);
   $: created = new Date(card.createdAt).toLocaleString();
   $: shouldCollapse = isLongContent(card.content);
@@ -64,9 +65,11 @@
 </script>
 
 <article class:scn-card--selected={selected} class="scn-card" on:dblclick={() => dispatch("edit", card)}>
-  <header class="scn-card__head">
+  <header class:scn-card__head--compact={!hasTitle} class="scn-card__head">
     <div>
-      <div class="scn-card__title" title={title}>{title}</div>
+      {#if hasTitle}
+        <div class="scn-card__title" title={title}>{title}</div>
+      {/if}
       <div class="scn-card__time">{created}</div>
     </div>
     <div class="scn-card__actions" role="group" aria-label="卡片操作" on:dblclick|stopPropagation>

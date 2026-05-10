@@ -19,12 +19,14 @@
     type EditorBlock,
     type EditorBlockType
   } from "../lib/editorModel";
+  import { normalizeTag } from "../lib/tagService";
   import type { CardDraft } from "../lib/types";
 
   export let title = "";
   export let value = "";
   export let editing = false;
   export let busy = false;
+  export let tags: string[] = [];
   export let uploadImage: (file: File) => Promise<string>;
 
   const dispatch = createEventDispatcher<{
@@ -48,9 +50,19 @@
   let composing = false;
   let blockRefs: Record<string, HTMLElement> = {};
   let imageRefs: Record<string, HTMLButtonElement> = {};
+  let captureElement: HTMLElement;
+  let tagSuggestion: {
+    blockId: string;
+    start: number;
+    query: string;
+    left: number;
+    top: number;
+    selectedIndex: number;
+  } | null = null;
 
   $: content = blocksToMarkdown(blocks);
   $: activeBlock = blocks.find((block) => block.id === activeBlockId) || blocks[0];
+  $: tagSuggestionOptions = buildTagSuggestionOptions(tagSuggestion?.query || "");
   $: if (title !== lastTitle) {
     titleValue = title;
     lastTitle = title;
@@ -159,6 +171,7 @@
     block.text = target.textContent || "";
     blocks = blocks;
     normalizeEmptyDocument();
+    updateTagSuggestion(block);
     if (!composing) {
       pushHistory();
     }
@@ -190,6 +203,16 @@
     blocks = [...blocks];
     pushHistory();
     void tick().then(() => focusBlock(block.id, offset + markdown.length));
+  }
+
+  function insertTagTrigger() {
+    insertInline("#");
+    void tick().then(() => {
+      const block = currentBlock(activeBlockId) || blocks[0];
+      if (block) {
+        updateTagSuggestion(block);
+      }
+    });
   }
 
   function focusEditorBlank(event: MouseEvent) {
@@ -233,6 +256,9 @@
     const mod = event.metaKey || event.ctrlKey;
     activeBlockId = block.id;
 
+    if (handleTagSuggestionKeydown(event, block)) {
+      return;
+    }
     if (event.key === "Tab") {
       event.preventDefault();
       changeIndent(block, event.shiftKey ? -1 : 1);
@@ -280,6 +306,9 @@
     if (!mod && event.key === " " && !composing && applyShortcut(block)) {
       event.preventDefault();
     }
+    if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      window.setTimeout(() => updateTagSuggestion(block), 0);
+    }
   }
 
   function applyShortcut(block: EditorBlock): boolean {
@@ -302,6 +331,7 @@
 
   function splitBlock(block: EditorBlock) {
     syncBlockTextFromDom(block);
+    closeTagSuggestion();
     const offset = caretOffset(blockRefs[block.id]);
     applyAction(splitEditorBlock(blocks, block.id, offset), true);
   }
@@ -352,6 +382,7 @@
   }
 
   function applyAction(result: EditorActionResult, push = true) {
+    closeTagSuggestion();
     blocks = result.blocks;
     activeBlockId = result.focusId;
     if (push) {
@@ -426,6 +457,7 @@
   }
 
   function restoreHistory() {
+    closeTagSuggestion();
     blocks = markdownToBlocks(history[historyIndex] || "");
     activeBlockId = blocks[0]?.id || "";
     void tick().then(() => {
@@ -488,6 +520,149 @@
         element.textContent = block.text;
       }
     }
+  }
+
+  function buildTagSuggestionOptions(query: string) {
+    const normalizedTags = [...new Set(tags.map((tag) => normalizeTag(tag)).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b));
+    const normalizedQuery = normalizeTag(query);
+    const lowered = normalizedQuery.toLocaleLowerCase();
+    const matches = normalizedTags
+      .filter((tag) => !lowered || tag.toLocaleLowerCase().includes(lowered))
+      .slice(0, normalizedQuery ? 7 : 8)
+      .map((tag) => ({ value: tag, label: tag, create: false }));
+
+    if (!normalizedQuery || normalizedTags.some((tag) => tag.toLocaleLowerCase() === lowered)) {
+      return matches;
+    }
+    return [{ value: normalizedQuery, label: `创建 ${normalizedQuery}`, create: true }, ...matches];
+  }
+
+  function updateTagSuggestion(block: EditorBlock) {
+    if (composing || block.type === "image") {
+      closeTagSuggestion();
+      return;
+    }
+    const element = blockRefs[block.id];
+    if (!element || document.activeElement !== element) {
+      closeTagSuggestion();
+      return;
+    }
+
+    const text = element.textContent || "";
+    const offset = caretOffset(element);
+    const trigger = findTagTrigger(text, offset);
+    if (!trigger) {
+      closeTagSuggestion();
+      return;
+    }
+
+    const position = tagSuggestionPosition(element, offset);
+    tagSuggestion = {
+      blockId: block.id,
+      start: trigger.start,
+      query: trigger.query,
+      left: position.left,
+      top: position.top,
+      selectedIndex: tagSuggestion?.query === trigger.query ? tagSuggestion.selectedIndex : 0
+    };
+  }
+
+  function findTagTrigger(text: string, offset: number) {
+    const before = text.slice(0, offset);
+    const start = before.lastIndexOf("#");
+    if (start < 0) {
+      return null;
+    }
+    const previous = start > 0 ? before[start - 1] : "";
+    const query = before.slice(start + 1);
+    if ((previous && !/\s/.test(previous)) || /[\s#]/.test(query)) {
+      return null;
+    }
+    return { start, query };
+  }
+
+  function tagSuggestionPosition(element: HTMLElement, offset: number) {
+    const hostRect = captureElement.getBoundingClientRect();
+    const range = document.createRange();
+    const textNode = element.firstChild;
+    const length = element.textContent?.length || 0;
+    if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+      range.setStart(textNode, Math.min(offset, length));
+    } else {
+      range.setStart(element, 0);
+    }
+    range.collapse(true);
+    const rect = range.getBoundingClientRect();
+    const fallback = element.getBoundingClientRect();
+    const rawLeft = (rect.width || rect.height ? rect.left : fallback.left) - hostRect.left;
+    const rawTop = (rect.width || rect.height ? rect.bottom : fallback.bottom) - hostRect.top;
+    const maxLeft = Math.max(12, hostRect.width - 360);
+    return {
+      left: Math.max(12, Math.min(rawLeft, maxLeft)),
+      top: Math.max(12, rawTop + 8)
+    };
+  }
+
+  function handleTagSuggestionKeydown(event: KeyboardEvent, block: EditorBlock) {
+    if (!tagSuggestion || tagSuggestion.blockId !== block.id) {
+      return false;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeTagSuggestion();
+      return true;
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const direction = event.key === "ArrowDown" ? 1 : -1;
+      const nextIndex = wrapIndex(tagSuggestion.selectedIndex + direction, tagSuggestionOptions.length);
+      tagSuggestion = { ...tagSuggestion, selectedIndex: nextIndex };
+      return true;
+    }
+    if (event.key === "Enter" || event.key === "Tab") {
+      if (tagSuggestionOptions.length === 0) {
+        return false;
+      }
+      event.preventDefault();
+      selectTagSuggestion(tagSuggestionOptions[tagSuggestion.selectedIndex] || tagSuggestionOptions[0]);
+      return true;
+    }
+    return false;
+  }
+
+  function wrapIndex(index: number, length: number) {
+    if (length <= 0) {
+      return 0;
+    }
+    return (index + length) % length;
+  }
+
+  function selectTagSuggestion(option: { value: string }) {
+    if (!tagSuggestion) {
+      return;
+    }
+    const block = currentBlock(tagSuggestion.blockId);
+    const element = block ? blockRefs[block.id] : undefined;
+    if (!block || !element) {
+      closeTagSuggestion();
+      return;
+    }
+
+    const offset = caretOffset(element);
+    const text = element.textContent || "";
+    const insertText = `#${option.value}# `;
+    block.text = `${text.slice(0, tagSuggestion.start)}${insertText}${text.slice(offset)}`;
+    element.textContent = block.text;
+    blocks = [...blocks];
+    pushHistory();
+    const focusOffset = tagSuggestion.start + insertText.length;
+    closeTagSuggestion();
+    void tick().then(() => focusBlock(block.id, focusOffset));
+  }
+
+  function closeTagSuggestion() {
+    tagSuggestion = null;
   }
 
   function editableText(node: HTMLElement, text: string) {
@@ -556,7 +731,7 @@
   }
 </script>
 
-<section class:scn-capture--expanded={expanded} class="scn-capture">
+<section bind:this={captureElement} class:scn-capture--expanded={expanded} class="scn-capture">
   <button class="scn-capture__expand" type="button" title={expanded ? "收起标题" : "展开标题"} on:click={toggleExpanded}>
     {expanded ? "⤡" : "⤢"}
   </button>
@@ -624,9 +799,13 @@
             role="textbox"
             tabindex="0"
             use:editableText={block.text}
-            on:focus={() => activeBlockId = block.id}
+            on:focus={() => {
+              activeBlockId = block.id;
+              window.setTimeout(() => updateTagSuggestion(block), 0);
+            }}
             on:input={(event) => updateBlockText(block, event.currentTarget)}
             on:keydown={(event) => handleKeydown(event, block)}
+            on:click={() => updateTagSuggestion(block)}
             on:paste={(event) => void handlePaste(event, block)}
             on:compositionstart={() => composing = true}
             on:compositionend={(event) => {
@@ -640,8 +819,31 @@
     {/each}
   </div>
 
+  {#if tagSuggestion && tagSuggestionOptions.length > 0}
+    <div
+      class="scn-tag-suggest"
+      style={`left: ${tagSuggestion.left}px; top: ${tagSuggestion.top}px;`}
+      role="listbox"
+      aria-label="选择或创建标签"
+    >
+      {#each tagSuggestionOptions as option, index (`${option.create ? "new" : "tag"}-${option.value}`)}
+        <button
+          class:scn-tag-suggest__item--active={index === tagSuggestion.selectedIndex}
+          class="scn-tag-suggest__item"
+          type="button"
+          role="option"
+          aria-selected={index === tagSuggestion.selectedIndex}
+          on:mousedown|preventDefault={() => selectTagSuggestion(option)}
+        >
+          <span>{option.create ? "+" : "#"}</span>
+          <strong>{option.label}</strong>
+        </button>
+      {/each}
+    </div>
+  {/if}
+
   <div class="scn-capture__toolbar">
-    <button class="scn-tool-button" type="button" title="标签" on:click={() => insertInline("#标签# ")}>#</button>
+    <button class="scn-tool-button" type="button" title="标签" on:click={insertTagTrigger}>#</button>
     <button class="scn-tool-button" type="button" title="加粗 Ctrl/⌘+B" on:click={() => wrapSelection("**")}>B</button>
     <button class:scn-tool-button--active={activeBlock?.type === "bullet"} class="scn-tool-button" type="button" title="无序列表" on:click={() => setBlockType(activeBlock, "bullet")}>☷</button>
     <button class:scn-tool-button--active={activeBlock?.type === "ordered"} class="scn-tool-button" type="button" title="有序列表" on:click={() => setBlockType(activeBlock, "ordered")}>☰</button>

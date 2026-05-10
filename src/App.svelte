@@ -871,6 +871,7 @@
     {:else}
       <CaptureBox
         {busy}
+        {tags}
         {uploadImage}
         on:submit={createCard}
         on:error={(event) => reportError(event.detail)}
