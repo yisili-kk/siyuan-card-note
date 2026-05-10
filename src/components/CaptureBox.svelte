@@ -651,7 +651,7 @@
 
     const offset = caretOffset(element);
     const text = element.textContent || "";
-    const insertText = `#${option.value}# `;
+    const insertText = `#${option.value} `;
     block.text = `${text.slice(0, tagSuggestion.start)}${insertText}${text.slice(offset)}`;
     element.textContent = block.text;
     blocks = [...blocks];

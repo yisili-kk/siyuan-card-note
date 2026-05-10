@@ -2,7 +2,7 @@
   "name": "siyuan-card-note",
   "author": "onebean",
   "url": "https://github.com/yisili-kk/siyuan-card-note",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "minAppVersion": "3.3.0",
   "backends": [
     "all"

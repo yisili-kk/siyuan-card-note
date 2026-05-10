@@ -39,7 +39,7 @@ assert.equal(clampIndent(12), 6);
 
 roundTrip("普通段落");
 roundTrip("第一段\n第二段");
-roundTrip("带 #标签# 的段落");
+roundTrip("带 #标签 的段落");
 roundTrip("**加粗** 和 `代码`");
 
 assert.deepEqual(shape("- 测试1"), [{ type: "bullet", text: "测试1", indent: 0 }]);

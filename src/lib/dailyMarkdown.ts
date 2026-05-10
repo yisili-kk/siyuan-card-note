@@ -10,7 +10,7 @@ export function buildDailyMarkdown(card: CardNote): string {
   const timestamp = formatDateTime(card.createdAt);
   const normalizedTitle = normalizeTitle(card.title);
   const title = normalizedTitle ? `${timestamp} ${normalizedTitle}` : timestamp;
-  const content = normalizeSiyuanTags(card.content.trim());
+  const content = stripTagControlChars(card.content.trim());
   if (!content) {
     return `- ${title}`;
   }
@@ -48,14 +48,6 @@ function indentMarkdown(markdown: string): string {
 function isPlainParagraphLine(line: string): boolean {
   const trimmed = line.trim();
   return Boolean(trimmed) && !/^(```|#{1,6}\s+|[-*]\s+|\d+\.\s+|>\s?|!\[[^\]]*\]\([^)]+\))/u.test(trimmed);
-}
-
-function normalizeSiyuanTags(markdown: string): string {
-  return stripTagControlChars(markdown).replace(/(^|\s)#([^#\s][^#\n]*?)(#|\s|$)/g, (_match, prefix: string, tag: string, suffix: string) => {
-    const normalized = tag.replace(/[，。！？；：,.!?;:]$/u, "").trim();
-    const trailing = suffix === "#" ? "" : suffix;
-    return normalized ? `${prefix}#${normalized}#${trailing}` : _match;
-  });
 }
 
 function formatDateTime(timestamp: number): string {

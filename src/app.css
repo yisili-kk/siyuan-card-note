@@ -1655,7 +1655,17 @@
 }
 
 .scn-md-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  margin: 0 2px;
+  padding: 1px 7px 2px;
+  border-radius: 7px;
   color: var(--scn-blue);
+  background: var(--scn-blue-soft);
+  font-weight: 500;
+  line-height: 1.45;
+  vertical-align: 1px;
 }
 
 .scn-card__content img {
@@ -1739,10 +1749,6 @@
 .scn-card__expand:hover,
 .scn-card__idea-toggle:hover {
   background: var(--scn-blue-soft);
-}
-
-.scn-md-tag {
-  color: var(--scn-blue);
 }
 
 .scn-card__foot {

@@ -1,7 +1,7 @@
 import type { CardNote, CardSortMode, CardStatusFilter, CardTimeFilter } from "./types";
 
 const TAG_CONTROL_CHARS = /[\u200B-\u200D\uFEFF]/g;
-const HASH_TAG = /(?:^|\s)#([^#\s][^#\n]*?)(?:#|\s|$)/g;
+const HASH_TAG = /(^|[\s\u200B-\u200D\uFEFF])#([^\s#，。！？；：,.!?;:]+)([，。！？；：,.!?;:]?)(?=\s|$)/gu;
 
 export function stripTagControlChars(value: string): string {
   return value.replace(TAG_CONTROL_CHARS, "");
@@ -10,7 +10,7 @@ export function stripTagControlChars(value: string): string {
 export function extractTags(content: string): string[] {
   const tags = new Set<string>();
   for (const match of stripTagControlChars(content).matchAll(HASH_TAG)) {
-    const tag = normalizeTag(match[1]);
+    const tag = normalizeTag(match[2]);
     if (tag) {
       tags.add(tag);
     }
@@ -123,11 +123,10 @@ export function removeTagFromMarkdown(markdown: string, tag: string): string {
 }
 
 function replaceHashTags(markdown: string, transform: (tag: string) => string): string {
-  const pattern = /(^|[\s\u200B-\u200D\uFEFF])#([^#\s][^#\n]*?)([，。！？；：,.!?;:]?)(#|(?=\s|$))/gu;
-  return stripTagControlChars(markdown).replace(pattern, (_match, prefix: string, rawTag: string, punctuation: string) => {
+  return stripTagControlChars(markdown).replace(HASH_TAG, (_match, prefix: string, rawTag: string, punctuation: string) => {
     const tag = normalizeTag(rawTag);
     const next = transform(tag);
-    return next ? `${prefix}#${next}#${punctuation}` : prefix;
+    return next ? `${prefix}#${next}${punctuation}` : prefix;
   });
 }
 

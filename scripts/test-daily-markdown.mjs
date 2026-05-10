@@ -41,19 +41,19 @@ assert.equal(
   "2026-04-30 17:00:43 测试标题"
 );
 
-assert.equal(stripTagControlChars("\u200B#test# 测试"), "#test# 测试");
-assert.deepEqual(extractTags("\u200B#test# 测试"), ["test"]);
-assert.deepEqual(buildCardTags("", "\u200B#test# 测试"), ["test"]);
-assert.equal(stripKramdownAttrs("\u200B#test# 测试"), "#test# 测试");
+assert.equal(stripTagControlChars("\u200B#test 测试"), "#test 测试");
+assert.deepEqual(extractTags("\u200B#test 测试"), ["test"]);
+assert.deepEqual(buildCardTags("", "\u200B#test 测试"), ["test"]);
+assert.equal(stripKramdownAttrs("\u200B#test 测试"), "#test 测试");
 assert.equal(tagMatchesSelection("Tag/选题", "Tag"), true);
 assert.equal(tagMatchesSelection("Tag/选题", "Tag/选题"), true);
 assert.equal(tagMatchesSelection("Tag/选题", "选题"), false);
-assert.equal(replaceTagInMarkdown("#Tag/选题# 内容", "Tag", "Topic"), "#Topic/选题# 内容");
-assert.equal(removeTagFromMarkdown("#Tag/选题# 内容", "Tag").trim(), "内容");
+assert.equal(replaceTagInMarkdown("#Tag/选题 内容", "Tag", "Topic"), "#Topic/选题 内容");
+assert.equal(removeTagFromMarkdown("#Tag/选题 内容", "Tag").trim(), "内容");
 assert.deepEqual(
   filterCards([
-    { id: "1", title: "", content: "#Tag/选题# A", tags: [], createdAt: 1, updatedAt: 1, pinned: false },
-    { id: "2", title: "", content: "#Other# B", tags: [], createdAt: 2, updatedAt: 2, pinned: false }
+    { id: "1", title: "", content: "#Tag/选题 A", tags: [], createdAt: 1, updatedAt: 1, pinned: false },
+    { id: "2", title: "", content: "#Other B", tags: [], createdAt: 2, updatedAt: 2, pinned: false }
   ], "", "Tag", "all", "all", "createdAsc").map((card) => card.id),
   ["1"]
 );
@@ -146,13 +146,13 @@ assert.equal(
   buildDailyMarkdown({
     id: "card-4",
     title: "标签格式",
-    content: "正文 #灵感 和 #思源#",
+    content: "正文 #灵感 和 #思源",
     tags: ["灵感", "思源"],
     createdAt,
     updatedAt: createdAt,
     pinned: false
   }),
-  "- 2026-04-30 17:00:15 标签格式\n\n  正文 #灵感# 和 #思源#"
+  "- 2026-04-30 17:00:15 标签格式\n\n  正文 #灵感 和 #思源"
 );
 
 assert.equal(firstLine("- 测试1\n  - 测试2"), "测试1");

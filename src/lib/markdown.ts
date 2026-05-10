@@ -124,7 +124,7 @@ export function escapeHtml(value: string): string {
 
 export function firstLine(value: string): string {
   const line = value.trim().split(/\r?\n/).find(Boolean);
-  return line ? formatPlainTags(stripMarkdownPrefix(line)) : "未命名卡片";
+  return line ? stripMarkdownPrefix(line) : "未命名卡片";
 }
 
 function stripMarkdownPrefix(value: string): string {
@@ -143,13 +143,9 @@ function renderInline(value: string): string {
   const withImages = escaped.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy" />');
   const withBold = withImages.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   const withInlineCode = withBold.replace(/`([^`]+)`/g, "<code>$1</code>");
-  return withInlineCode.replace(/(^|\s)#([^#\s][^#\n]*?)(#|\s|$)/g, (_match, prefix: string, tag: string, suffix: string) => {
-    return `${prefix}<span class="scn-md-tag">#${tag}</span>${suffix === "#" ? "" : suffix}`;
+  return withInlineCode.replace(/(^|\s)#([^\s#，。！？；：,.!?;:]+)([，。！？；：,.!?;:]?)(?=\s|$)/g, (_match, prefix: string, tag: string, punctuation: string) => {
+    return `${prefix}<span class="scn-md-tag">#${tag}</span>${punctuation}`;
   });
-}
-
-function formatPlainTags(value: string): string {
-  return value.replace(/(^|\s)#([^#\s][^#\n]*?)#(?=\s|$)/g, "$1#$2");
 }
 
 function renderReviewIdea(time: string, lines: string[]): string {
