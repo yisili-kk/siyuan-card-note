@@ -24,7 +24,7 @@ const { firstLine, renderMarkdownPreview } = await import(`data:text/javascript;
 const editorModelOutput = transpile(resolve(process.cwd(), "src/lib/editorModel.ts"));
 const { blocksToMarkdown, markdownToBlocks } = await import(`data:text/javascript;base64,${Buffer.from(editorModelOutput).toString("base64")}`);
 const tagServiceOutput = transpile(resolve(process.cwd(), "src/lib/tagService.ts"));
-const { buildCardTags, extractTags, stripTagControlChars } = await import(`data:text/javascript;base64,${Buffer.from(tagServiceOutput).toString("base64")}`);
+const { buildCardTags, extractTags, filterCards, removeTagFromMarkdown, replaceTagInMarkdown, stripTagControlChars, tagMatchesSelection } = await import(`data:text/javascript;base64,${Buffer.from(tagServiceOutput).toString("base64")}`);
 const createdAt = new Date(2026, 3, 30, 17, 0, 15).getTime();
 
 const tempDir = join(tmpdir(), `cardnote-tests-${Date.now()}`);
@@ -45,6 +45,18 @@ assert.equal(stripTagControlChars("\u200B#test# 测试"), "#test# 测试");
 assert.deepEqual(extractTags("\u200B#test# 测试"), ["test"]);
 assert.deepEqual(buildCardTags("", "\u200B#test# 测试"), ["test"]);
 assert.equal(stripKramdownAttrs("\u200B#test# 测试"), "#test# 测试");
+assert.equal(tagMatchesSelection("Tag/选题", "Tag"), true);
+assert.equal(tagMatchesSelection("Tag/选题", "Tag/选题"), true);
+assert.equal(tagMatchesSelection("Tag/选题", "选题"), false);
+assert.equal(replaceTagInMarkdown("#Tag/选题# 内容", "Tag", "Topic"), "#Topic/选题# 内容");
+assert.equal(removeTagFromMarkdown("#Tag/选题# 内容", "Tag").trim(), "内容");
+assert.deepEqual(
+  filterCards([
+    { id: "1", title: "", content: "#Tag/选题# A", tags: [], createdAt: 1, updatedAt: 1, pinned: false },
+    { id: "2", title: "", content: "#Other# B", tags: [], createdAt: 2, updatedAt: 2, pinned: false }
+  ], "", "Tag", "all", "all", "createdAsc").map((card) => card.id),
+  ["1"]
+);
 
 assert.deepEqual(
   parseDailyBlock(`{: id="20260501183204-mucmloq" updated="20260501183204"}2026-04-30 17:00:43 测试标题

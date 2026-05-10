@@ -305,21 +305,76 @@
 .scn-tag-row {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
+  grid-template-columns: 24px minmax(0, 1fr) 34px;
   align-items: center;
   gap: 4px;
   min-width: 0;
+  padding-left: calc(var(--scn-tag-depth, 0) * 18px);
+}
+
+.scn-tag-row--child::before {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: calc(12px + (var(--scn-tag-depth, 0) - 1) * 18px);
+  width: 1px;
+  background: #e3e9f2;
+  content: "";
+}
+
+.scn-tag-collapse,
+.scn-tag-collapse-placeholder {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 24px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+}
+
+.scn-tag-collapse {
+  border: 0;
+  border-radius: 8px;
+  color: #7f8a9b;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.scn-tag-collapse:hover {
+  color: var(--scn-blue);
+  background: #eef3f9;
+}
+
+.scn-tag-collapse--collapsed {
+  transform: rotate(-90deg);
 }
 
 .scn-tag-button {
   min-width: 0;
+  padding-left: 8px;
 }
 
-.scn-tag-button > span:last-child {
+.scn-tag-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.scn-tag-count {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: #657386;
+  font-size: 12px;
+}
+
+.scn-tag-button.scn-active .scn-tag-count,
+.scn-tag-button:hover .scn-tag-count {
+  color: var(--scn-blue);
 }
 
 .scn-tag-menu-button {

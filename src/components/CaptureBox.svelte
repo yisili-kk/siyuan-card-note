@@ -72,7 +72,12 @@
     await insertUploadedImage(file);
     if (fileInput) {
       fileInput.value = "";
+      fileInput.blur();
     }
+  }
+
+  function blurFileInputSoon() {
+    window.setTimeout(() => fileInput?.blur(), 0);
   }
 
   async function handlePaste(event: ClipboardEvent, block: EditorBlock) {
@@ -152,6 +157,7 @@
 
   function updateBlockText(block: EditorBlock, target: HTMLElement) {
     block.text = target.textContent || "";
+    blocks = blocks;
     normalizeEmptyDocument();
     if (!composing) {
       pushHistory();
@@ -295,15 +301,24 @@
   }
 
   function splitBlock(block: EditorBlock) {
+    syncBlockTextFromDom(block);
     const offset = caretOffset(blockRefs[block.id]);
     applyAction(splitEditorBlock(blocks, block.id, offset), true);
   }
 
   function handleBackspaceAtStart(event: KeyboardEvent, block: EditorBlock) {
+    syncBlockTextFromDom(block);
     const result = backspaceAtBlockStart(blocks, block.id);
     if (result.handled) {
       event.preventDefault();
       applyAction(result, true);
+    }
+  }
+
+  function syncBlockTextFromDom(block: EditorBlock) {
+    const element = blockRefs[block.id];
+    if (element) {
+      block.text = element.textContent || "";
     }
   }
 
@@ -342,7 +357,10 @@
     if (push) {
       pushHistory();
     }
-    void tick().then(() => focusBlock(result.focusId, result.focusOffset));
+    void tick().then(() => {
+      syncEditableDomFromModel();
+      focusBlock(result.focusId, result.focusOffset);
+    });
   }
 
   function wrapSelection(wrapper: string) {
@@ -410,7 +428,10 @@
   function restoreHistory() {
     blocks = markdownToBlocks(history[historyIndex] || "");
     activeBlockId = blocks[0]?.id || "";
-    void tick().then(() => focusBlock(activeBlockId));
+    void tick().then(() => {
+      syncEditableDomFromModel();
+      focusBlock(activeBlockId);
+    });
   }
 
   function normalizeEmptyDocument() {
@@ -455,6 +476,32 @@
     const selection = window.getSelection();
     selection?.removeAllRanges();
     selection?.addRange(range);
+  }
+
+  function syncEditableDomFromModel() {
+    for (const block of blocks) {
+      if (block.type === "image") {
+        continue;
+      }
+      const element = blockRefs[block.id];
+      if (element && element.textContent !== block.text) {
+        element.textContent = block.text;
+      }
+    }
+  }
+
+  function editableText(node: HTMLElement, text: string) {
+    const setText = (nextText: string) => {
+      if (document.activeElement !== node && node.textContent !== nextText) {
+        node.textContent = nextText;
+      }
+    };
+    setText(text);
+    return {
+      update(nextText: string) {
+        setText(nextText);
+      }
+    };
   }
 
   function caretOffset(element?: HTMLElement, node?: Node, offset?: number) {
@@ -576,6 +623,7 @@
             data-placeholder={index === 0 ? "✍ 记录你的想法..." : ""}
             role="textbox"
             tabindex="0"
+            use:editableText={block.text}
             on:focus={() => activeBlockId = block.id}
             on:input={(event) => updateBlockText(block, event.currentTarget)}
             on:keydown={(event) => handleKeydown(event, block)}
@@ -586,7 +634,7 @@
               updateBlockText(block, event.currentTarget);
               pushHistory();
             }}
-          >{block.text}</div>
+          ></div>
         {/if}
       </div>
     {/each}
@@ -605,6 +653,7 @@
         type="file"
         accept="image/*"
         disabled={busy || uploading}
+        on:click={blurFileInputSoon}
         on:change={(event) => void handleImage(event.currentTarget.files)}
       />
     </label>

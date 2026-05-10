@@ -69,7 +69,7 @@ export function filterCards(cards: CardNote[], keyword: string, selectedTag: str
     .filter((card) => {
       const tags = getCardTags(card);
       const matchesKeyword = !lowered || card.content.toLocaleLowerCase().includes(lowered) || (card.title || "").toLocaleLowerCase().includes(lowered) || tags.some((tag) => tag.toLocaleLowerCase().includes(lowered));
-      const matchesTag = !selectedTag || tags.includes(selectedTag);
+      const matchesTag = !selectedTag || tags.some((tag) => tagMatchesSelection(tag, selectedTag));
       const matchesStatus = matchStatus(card, status);
       const matchesTime = matchTime(card, time);
       return matchesKeyword && matchesTag && matchesStatus && matchesTime;
@@ -94,14 +94,24 @@ export function normalizeTag(tag: string): string {
   return stripTagControlChars(tag).replace(/^#+|#+$/g, "").replace(/[，。！？；：,.!?;:]$/u, "").trim();
 }
 
+export function tagMatchesSelection(tag: string, selectedTag: string): boolean {
+  const source = normalizeTag(tag);
+  const target = normalizeTag(selectedTag);
+  return Boolean(source && target && (source === target || source.startsWith(`${target}/`)));
+}
+
 export function replaceTagInMarkdown(markdown: string, from: string, to: string): string {
   const source = normalizeTag(from);
   const target = normalizeTag(to);
   if (!source || !target) {
     return markdown;
   }
-  const pattern = new RegExp(`(^|[\\s\\u200B-\\u200D\\uFEFF])#${escapeRegExp(source)}([，。！？；：,.!?;:]?)(#|(?=\\s|$))`, "gu");
-  return stripTagControlChars(markdown).replace(pattern, (_match, prefix: string, punctuation: string) => `${prefix}#${target}#${punctuation}`);
+  return replaceHashTags(markdown, (tag) => {
+    if (!tagMatchesSelection(tag, source)) {
+      return tag;
+    }
+    return `${target}${normalizeTag(tag).slice(source.length)}`;
+  });
 }
 
 export function removeTagFromMarkdown(markdown: string, tag: string): string {
@@ -109,12 +119,16 @@ export function removeTagFromMarkdown(markdown: string, tag: string): string {
   if (!source) {
     return markdown;
   }
-  const pattern = new RegExp(`(^|[\\s\\u200B-\\u200D\\uFEFF])#${escapeRegExp(source)}[，。！？；：,.!?;:]?(#|(?=\\s|$))`, "gu");
-  return stripTagControlChars(markdown).replace(pattern, "$1").replace(/[ \t]{2,}/g, " ");
+  return replaceHashTags(markdown, (value) => tagMatchesSelection(value, source) ? "" : value).replace(/[ \t]{2,}/g, " ");
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function replaceHashTags(markdown: string, transform: (tag: string) => string): string {
+  const pattern = /(^|[\s\u200B-\u200D\uFEFF])#([^#\s][^#\n]*?)([，。！？；：,.!?;:]?)(#|(?=\s|$))/gu;
+  return stripTagControlChars(markdown).replace(pattern, (_match, prefix: string, rawTag: string, punctuation: string) => {
+    const tag = normalizeTag(rawTag);
+    const next = transform(tag);
+    return next ? `${prefix}#${next}#${punctuation}` : prefix;
+  });
 }
 
 function matchStatus(card: CardNote, status: CardStatusFilter): boolean {

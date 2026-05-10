@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from "svelte";
+  import { getCardTags, normalizeTag } from "../lib/tagService";
   import type { CardNote, CardStatusFilter, CardTimeFilter } from "../lib/types";
 
   export let keyword = "";
@@ -27,8 +28,18 @@
   let editingTag = "";
   let editingDraft = "";
   let editingInput: HTMLInputElement | null = null;
+  let collapsedTags = new Set<string>();
   const heatmapWeeks = 12;
   const daysPerWeek = 7;
+
+  interface TagTreeNode {
+    name: string;
+    fullPath: string;
+    count: number;
+    depth: number;
+    children: TagTreeNode[];
+    cardIds: Set<string>;
+  }
 
   const statusItems: Array<{ value: CardStatusFilter; label: string }> = [
     { value: "all", label: "全部" },
@@ -47,6 +58,7 @@
 
   $: heatmapCells = buildHeatmapCells(cards);
   $: activeDays = countCardDays(cards);
+  $: tagRows = flattenTagTree(buildTagTree(tags, cards), collapsedTags);
 
   function buildHeatmapCells(cardList: CardNote[]) {
     const counts = new Map<string, number>();
@@ -160,6 +172,73 @@
     editingTag = "";
     dispatch("deleteTag", tag);
   }
+
+  function buildTagTree(tagList: string[], cardList: CardNote[]): TagTreeNode[] {
+    const roots: TagTreeNode[] = [];
+    const nodeMap = new Map<string, TagTreeNode>();
+
+    for (const tag of tagList.map((value) => normalizeTag(value)).filter(Boolean)) {
+      const parts = tag.split("/").map((part) => part.trim()).filter(Boolean);
+      let path = "";
+      let siblings = roots;
+      parts.forEach((part, depth) => {
+        path = path ? `${path}/${part}` : part;
+        let node = nodeMap.get(path);
+        if (!node) {
+          node = { name: part, fullPath: path, count: 0, depth, children: [], cardIds: new Set() };
+          nodeMap.set(path, node);
+          siblings.push(node);
+        }
+        siblings = node.children;
+      });
+    }
+
+    for (const card of cardList) {
+      for (const tag of getCardTags(card)) {
+        const parts = normalizeTag(tag).split("/").map((part) => part.trim()).filter(Boolean);
+        let path = "";
+        for (const part of parts) {
+          path = path ? `${path}/${part}` : part;
+          nodeMap.get(path)?.cardIds.add(card.id);
+        }
+      }
+    }
+
+    for (const node of nodeMap.values()) {
+      node.count = node.cardIds.size;
+    }
+
+    sortTagNodes(roots);
+    return roots;
+  }
+
+  function sortTagNodes(nodes: TagTreeNode[]) {
+    nodes.sort((a, b) => a.name.localeCompare(b.name));
+    nodes.forEach((node) => sortTagNodes(node.children));
+  }
+
+  function flattenTagTree(nodes: TagTreeNode[], collapsed: Set<string>): TagTreeNode[] {
+    return nodes.flatMap((node) => {
+      if (collapsed.has(node.fullPath)) {
+        return [node];
+      }
+      return [node, ...flattenTagTree(node.children, collapsed)];
+    });
+  }
+
+  function tagRowStyle(node: TagTreeNode) {
+    return `--scn-tag-depth: ${node.depth}`;
+  }
+
+  function toggleTagCollapse(tag: string) {
+    const next = new Set(collapsedTags);
+    if (next.has(tag)) {
+      next.delete(tag);
+    } else {
+      next.add(tag);
+    }
+    collapsedTags = next;
+  }
 </script>
 
 <aside class="scn-sidebar">
@@ -259,7 +338,8 @@
     {#if tags.length === 0}
       <div class="scn-sidebar__empty">暂无标签</div>
     {:else}
-      {#each tags as tag}
+      {#each tagRows as tagNode (tagNode.fullPath)}
+        {@const tag = tagNode.fullPath}
         {#if editingTag === tag}
           <form class="scn-tag-editor" on:submit|preventDefault={submitRenameTag}>
             <span>#</span>
@@ -279,7 +359,21 @@
             <button type="button" title="取消" on:click={cancelRenameTag}>×</button>
           </form>
         {:else}
-          <div class="scn-tag-row">
+          <div class:scn-tag-row--child={tagNode.depth > 0} class="scn-tag-row" style={tagRowStyle(tagNode)}>
+            {#if tagNode.children.length > 0}
+              <button
+                class:scn-tag-collapse--collapsed={collapsedTags.has(tag)}
+                class="scn-tag-collapse"
+                type="button"
+                aria-label={collapsedTags.has(tag) ? `展开标签 ${tag}` : `收起标签 ${tag}`}
+                aria-expanded={!collapsedTags.has(tag)}
+                on:click|stopPropagation={() => toggleTagCollapse(tag)}
+              >
+                ▾
+              </button>
+            {:else}
+              <span class="scn-tag-collapse-placeholder" aria-hidden="true"></span>
+            {/if}
             <button
               class:scn-active={selectedTag === tag && !settingsOpen}
               class="scn-tag-button"
@@ -288,7 +382,8 @@
               on:click={() => selectTag(tag)}
             >
               <span>#</span>
-              <span>{tag}</span>
+              <span class="scn-tag-name">{tagNode.name}</span>
+              <span class="scn-tag-count">{tagNode.count}</span>
             </button>
             <button
               class:scn-tag-menu-button--open={openTagMenu === tag}
