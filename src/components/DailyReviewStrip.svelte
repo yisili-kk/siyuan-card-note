@@ -15,7 +15,7 @@
     later: CardNote;
     dismissToday: CardNote;
     view: CardNote;
-    appendIdea: { card: CardNote; idea: string };
+    appendIdea: { card: CardNote; idea: string; markReviewed?: boolean };
   }>();
 
   let collapsed = false;
@@ -63,7 +63,7 @@
     if (!idea) {
       return;
     }
-    dispatch("appendIdea", { card, idea });
+    dispatch("appendIdea", { card, idea, markReviewed: true });
     activeIdeaCardId = "";
     ideaDrafts = {
       ...ideaDrafts,

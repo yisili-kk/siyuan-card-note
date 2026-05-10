@@ -11,6 +11,7 @@
 
   const dispatch = createEventDispatcher<{
     done: CardNote;
+    cancel: void;
     error: unknown;
     openTab: CardNote;
   }>();
@@ -198,6 +199,9 @@
       </button>
       <button class="b3-button" type="button" on:click={finish} disabled={busy || initializing || !card.boundBlockId}>
         完成
+      </button>
+      <button class="b3-button b3-button--outline" type="button" on:click={() => dispatch("cancel")} disabled={busy}>
+        取消
       </button>
     </div>
   </header>

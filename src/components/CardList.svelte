@@ -21,6 +21,7 @@
     sync: CardNote;
     readBack: CardNote;
     pin: CardNote;
+    appendIdea: { card: CardNote; idea: string };
     previewImage: string;
     finishNativeEdit: CardNote;
     openNativeTab: CardNote;
@@ -40,6 +41,7 @@
             {busy}
             on:error={(event) => dispatch("error", event.detail)}
             on:done={(event) => dispatch("finishNativeEdit", event.detail)}
+            on:cancel={() => dispatch("cancelEdit")}
             on:openTab={(event) => dispatch("openNativeTab", event.detail)}
           />
         </div>
@@ -47,12 +49,14 @@
         <CardItem
           {card}
           selected={false}
+          {busy}
           on:view={(event) => dispatch("view", event.detail)}
           on:edit={(event) => dispatch("edit", event.detail)}
           on:delete={(event) => dispatch("delete", event.detail)}
           on:sync={(event) => dispatch("sync", event.detail)}
           on:readBack={(event) => dispatch("readBack", event.detail)}
           on:pin={(event) => dispatch("pin", event.detail)}
+          on:appendIdea={(event) => dispatch("appendIdea", event.detail)}
           on:previewImage={(event) => dispatch("previewImage", event.detail)}
         />
       {/if}

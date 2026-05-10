@@ -479,9 +479,10 @@
     }
   }
 
-  async function appendReviewIdea(event: CustomEvent<{ card: CardNote; idea: string }>) {
+  async function appendReviewIdea(event: CustomEvent<{ card: CardNote; idea: string; markReviewed?: boolean }>) {
     const card = event.detail.card;
     const idea = event.detail.idea.trim();
+    const markReviewed = event.detail.markReviewed !== false;
     if (!idea) {
       showMessage("请输入想法内容", 3000);
       return;
@@ -515,8 +516,10 @@
         detailCard = finalCard;
       }
       await saveCards(plugin, cards);
-      reviewState = applyReviewAction(reviewState, finalCard.id, "reviewed");
-      await saveReviewState(plugin, reviewState);
+      if (markReviewed) {
+        reviewState = applyReviewAction(reviewState, finalCard.id, "reviewed");
+        await saveReviewState(plugin, reviewState);
+      }
       if (!syncFailed) {
         showMessage("想法已追加到卡片");
       }
@@ -895,6 +898,7 @@
         on:sync={syncCard}
         on:readBack={readBackCard}
         on:pin={togglePin}
+        on:appendIdea={(event) => void appendReviewIdea(new CustomEvent("appendIdea", { detail: { ...event.detail, markReviewed: false } }))}
         on:previewImage={(event) => previewImageSrc = event.detail}
         on:finishNativeEdit={(event) => void finishNativeEdit(event.detail)}
         on:openNativeTab={(event) => void openNativeTab(event.detail)}
@@ -908,11 +912,14 @@
 
   {#if detailCard}
     <CardDetail
+      {plugin}
       card={detailCard}
+      {busy}
       on:close={() => detailCard = undefined}
       on:edit={(event) => openEditor(event.detail)}
-      on:sync={syncCard}
-      on:readBack={readBackCard}
+      on:done={(event) => void finishNativeEdit(event.detail)}
+      on:error={(event) => reportError(event.detail)}
+      on:openTab={(event) => void openNativeTab(event.detail)}
       on:previewImage={(event) => previewImageSrc = event.detail}
     />
   {/if}

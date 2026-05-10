@@ -184,6 +184,43 @@
     void tick().then(() => focusBlock(block.id, offset + markdown.length));
   }
 
+  function focusEditorBlank(event: MouseEvent) {
+    if (busy) {
+      return;
+    }
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest(".scn-editor-block__input, .scn-editor-block__image, input, button")) {
+      return;
+    }
+    const lastTextBlock = [...blocks].reverse().find((block) => block.type !== "image");
+    if (lastTextBlock) {
+      activeBlockId = lastTextBlock.id;
+      void tick().then(() => focusBlock(lastTextBlock.id));
+      return;
+    }
+    const lastBlock = blocks[blocks.length - 1];
+    if (lastBlock) {
+      insertBlocksAfter(lastBlock.id, [createEditorBlock()], false);
+    } else {
+      blocks = [createEditorBlock()];
+      activeBlockId = blocks[0].id;
+      void tick().then(() => focusBlock(activeBlockId));
+    }
+  }
+
+  function handleEditorShellKeydown(event: KeyboardEvent) {
+    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) {
+      return;
+    }
+    event.preventDefault();
+    const lastTextBlock = [...blocks].reverse().find((block) => block.type !== "image") || blocks[0];
+    if (lastTextBlock) {
+      activeBlockId = lastTextBlock.id;
+      void tick().then(() => focusBlock(lastTextBlock.id));
+    }
+  }
+
+
   function handleKeydown(event: KeyboardEvent, block: EditorBlock) {
     const mod = event.metaKey || event.ctrlKey;
     activeBlockId = block.id;
@@ -474,6 +511,9 @@
     data-placeholder="✍ 记录你的想法..."
     role="textbox"
     aria-multiline="true"
+    tabindex="0"
+    on:click={focusEditorBlank}
+    on:keydown={handleEditorShellKeydown}
   >
     {#each blocks as block, index (block.id)}
       <div

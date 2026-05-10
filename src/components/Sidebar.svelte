@@ -68,6 +68,7 @@
           key,
           count,
           level: heatmapLevel(count),
+          week,
           label: `${formatDate(time)}：${time <= today ? count > 0 ? `${count} 张卡片` : "无卡片" : "未来日期"}`
         });
       }
@@ -198,6 +199,7 @@
         class:scn-heatmap__hot={cell.count > 0}
         class="scn-heatmap__level-{cell.level}"
         data-tooltip={cell.label}
+        data-week={cell.week}
         aria-label={cell.label}
         title={cell.label}
       ></span>

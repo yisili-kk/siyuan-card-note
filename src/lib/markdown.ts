@@ -53,7 +53,8 @@ export function renderMarkdownPreview(markdown: string): string {
     listStack[listStack.length - 1].items.push(itemHtml);
   };
 
-  for (const rawLine of lines) {
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const rawLine = lines[lineIndex];
     const line = rawLine.trimEnd();
     const trimmed = line.trimStart();
     const indent = line.length - trimmed.length;
@@ -69,10 +70,24 @@ export function renderMarkdownPreview(markdown: string): string {
       blocks.push(`<h${heading[1].length}>${renderInline(heading[2])}</h${heading[1].length}>`);
       continue;
     }
-    if (/^>\s+/.test(trimmed)) {
+    if (/^>/.test(trimmed)) {
       flushParagraph();
       flushLists();
-      blocks.push(`<blockquote>${renderInline(trimmed.replace(/^>\s+/, ""))}</blockquote>`);
+      const quoteLines = [trimmed.replace(/^>\s?/, "")];
+      while (lineIndex + 1 < lines.length) {
+        const nextTrimmed = lines[lineIndex + 1].trimEnd().trimStart();
+        if (!/^>/.test(nextTrimmed)) {
+          break;
+        }
+        quoteLines.push(nextTrimmed.replace(/^>\s?/, ""));
+        lineIndex += 1;
+      }
+      const reviewIdea = quoteLines[0].match(/^回顾想法\s+(.+)$/);
+      if (reviewIdea) {
+        blocks.push(renderReviewIdea(reviewIdea[1], quoteLines.slice(1)));
+      } else {
+        blocks.push(...quoteLines.map((quoteLine) => `<blockquote>${renderInline(quoteLine)}</blockquote>`));
+      }
       continue;
     }
     const todo = trimmed.match(/^[-*]\s+\[( |x|X)]\s+(.+)$/);
@@ -129,4 +144,21 @@ function renderInline(value: string): string {
   const withBold = withImages.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   const withInlineCode = withBold.replace(/`([^`]+)`/g, "<code>$1</code>");
   return withInlineCode.replace(/(^|\s)#([^#\s][^#\n]*?)(#|\s|$)/g, '$1<span class="scn-md-tag">#$2</span>$3');
+}
+
+function renderReviewIdea(time: string, lines: string[]): string {
+  const bodyLines = [...lines];
+  while (bodyLines.length > 0 && !bodyLines[0].trim()) {
+    bodyLines.shift();
+  }
+  while (bodyLines.length > 0 && !bodyLines[bodyLines.length - 1].trim()) {
+    bodyLines.pop();
+  }
+  const body = bodyLines.map((line) => line.trim() ? renderInline(line) : "").join("<br />");
+  return [
+    '<section class="scn-review-idea">',
+    `<div class="scn-review-idea__meta">回顾想法 · ${escapeHtml(time.trim())}</div>`,
+    body ? `<div class="scn-review-idea__body">${body}</div>` : "",
+    "</section>"
+  ].join("");
 }

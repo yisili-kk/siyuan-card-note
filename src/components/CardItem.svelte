@@ -5,6 +5,7 @@
 
   export let card: CardNote;
   export let selected = false;
+  export let busy = false;
 
   const dispatch = createEventDispatcher<{
     view: CardNote;
@@ -13,10 +14,13 @@
     sync: CardNote;
     readBack: CardNote;
     pin: CardNote;
+    appendIdea: { card: CardNote; idea: string };
     previewImage: string;
   }>();
 
   let expanded = false;
+  let ideaOpen = false;
+  let ideaDraft = "";
   let renderedCardId = "";
 
   $: html = renderMarkdownPreview(card.content);
@@ -26,6 +30,8 @@
   $: if (card.id !== renderedCardId) {
     renderedCardId = card.id;
     expanded = false;
+    ideaOpen = false;
+    ideaDraft = "";
   }
 
   function isLongContent(content: string): boolean {
@@ -45,6 +51,16 @@
       previewImage(event as unknown as MouseEvent);
     }
   }
+
+  function saveIdea() {
+    const idea = ideaDraft.trim();
+    if (!idea) {
+      return;
+    }
+    dispatch("appendIdea", { card, idea });
+    ideaDraft = "";
+    ideaOpen = false;
+  }
 </script>
 
 <article class:scn-card--selected={selected} class="scn-card" on:dblclick={() => dispatch("edit", card)}>
@@ -55,12 +71,7 @@
     </div>
     <div class="scn-card__actions" role="group" aria-label="卡片操作" on:dblclick|stopPropagation>
       <button type="button" title="置顶" on:click={() => dispatch("pin", card)}>{card.pinned ? "★" : "☆"}</button>
-      <button type="button" title="阅读" on:click={() => dispatch("view", card)}>□</button>
       <button type="button" title="编辑" on:click={() => dispatch("edit", card)}>✎</button>
-      {#if card.boundBlockId}
-        <button type="button" title="从日记回读" on:click={() => dispatch("readBack", card)}>⇣</button>
-      {/if}
-      <button type="button" title="同步" on:click={() => dispatch("sync", card)}>↻</button>
       <button class="scn-danger" type="button" title="删除" on:click={() => dispatch("delete", card)}>×</button>
     </div>
   </header>
@@ -76,6 +87,25 @@
     {@html html}
   </div>
 
+  {#if ideaOpen}
+    <div class="scn-card__idea" role="presentation" on:dblclick|stopPropagation>
+      <textarea
+        value={ideaDraft}
+        placeholder="给这张卡补一句新的想法..."
+        rows="3"
+        disabled={busy}
+        on:input={(event) => ideaDraft = event.currentTarget.value}
+      ></textarea>
+      <div>
+        <button type="button" disabled={busy || !ideaDraft.trim()} on:click={saveIdea}>保存想法</button>
+        <button type="button" disabled={busy} on:click={() => {
+          ideaOpen = false;
+          ideaDraft = "";
+        }}>取消</button>
+      </div>
+    </div>
+  {/if}
+
   <footer class="scn-card__foot">
     <div class="scn-card__foot-left">
       {#if shouldCollapse}
@@ -83,6 +113,7 @@
           {expanded ? "收起" : "展开"}
         </button>
       {/if}
+      <button class="scn-card__idea-toggle" type="button" disabled={busy} on:click={() => ideaOpen = !ideaOpen}>记想法</button>
     </div>
     <div class="scn-card__meta">
       {#if card.syncConflict}
