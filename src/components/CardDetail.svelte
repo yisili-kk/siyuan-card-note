@@ -16,9 +16,12 @@
     openTab: CardNote;
     error: unknown;
     previewImage: string;
+    appendIdea: { card: CardNote; idea: string };
   }>();
 
   let editing = false;
+  let ideaOpen = false;
+  let ideaDraft = "";
   let renderedCardId = "";
 
   $: title = card.title?.trim() || firstLine(card.content);
@@ -28,6 +31,8 @@
   $: if (card.id !== renderedCardId) {
     renderedCardId = card.id;
     editing = false;
+    ideaOpen = false;
+    ideaDraft = "";
   }
 
   function previewImage(event: MouseEvent) {
@@ -54,6 +59,16 @@
   function finishEdit() {
     editing = false;
     dispatch("done", card);
+  }
+
+  function saveIdea() {
+    const idea = ideaDraft.trim();
+    if (!idea) {
+      return;
+    }
+    dispatch("appendIdea", { card, idea });
+    ideaDraft = "";
+    ideaOpen = false;
   }
 </script>
 
@@ -83,11 +98,31 @@
         {@html html}
       </div>
 
+      {#if ideaOpen}
+        <div class="scn-detail__idea">
+          <textarea
+            value={ideaDraft}
+            placeholder="记录这张卡片带来的新想法..."
+            rows="3"
+            disabled={busy}
+            on:input={(event) => ideaDraft = event.currentTarget.value}
+          ></textarea>
+          <div>
+            <button type="button" disabled={busy || !ideaDraft.trim()} on:click={saveIdea}>保存想法</button>
+            <button type="button" disabled={busy} on:click={() => {
+              ideaOpen = false;
+              ideaDraft = "";
+            }}>取消</button>
+          </div>
+        </div>
+      {/if}
+
       <footer class="scn-detail__foot">
         {#if card.syncConflict}
           <span class="scn-card__sync-error" title="思源日记块已被修改，可手动处理">内容冲突</span>
         {/if}
         <div class="scn-actions">
+          <button class="b3-button b3-button--outline" type="button" disabled={busy} on:click={() => ideaOpen = !ideaOpen}>记录想法</button>
           <button class="b3-button" type="button" on:click={startEdit}>编辑</button>
         </div>
       </footer>

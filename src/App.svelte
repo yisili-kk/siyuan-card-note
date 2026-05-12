@@ -938,6 +938,7 @@
       on:error={(event) => reportError(event.detail)}
       on:openTab={(event) => void openNativeTab(event.detail)}
       on:previewImage={(event) => previewImageSrc = event.detail}
+      on:appendIdea={(event) => void appendReviewIdea(new CustomEvent("appendIdea", { detail: { ...event.detail, markReviewed: false } }))}
     />
   {/if}
 
