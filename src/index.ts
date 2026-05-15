@@ -1,5 +1,5 @@
 import App from "./App.svelte";
-import { openTab, Plugin, showMessage } from "siyuan";
+import { Dialog, getFrontend, openTab, Plugin, showMessage } from "siyuan";
 import type { Custom } from "siyuan";
 import { TAB_TYPE } from "./lib/constants";
 import type { AppApi } from "./lib/types";
@@ -8,8 +8,14 @@ import "./app.css";
 export default class SiYuanCardNote extends Plugin {
   private readonly apps = new Set<AppApi>();
   private customApps = new WeakMap<Custom, AppApi>();
+  private isMobile = false;
+  private mobileDialog?: Dialog;
+  private mobileDialogApp?: AppApi & { $destroy(): void };
 
   onload(): void {
+    const frontend = getFrontend();
+    this.isMobile = frontend === "mobile" || frontend === "browser-mobile";
+
     this.addIcons(`
       <symbol id="iconCardNote" viewBox="0 0 32 32">
         <rect x="5" y="7" width="22" height="16" rx="3"></rect>
@@ -22,12 +28,7 @@ export default class SiYuanCardNote extends Plugin {
     this.addTab({
       type: TAB_TYPE,
       init(this: Custom) {
-        const app = new App({
-          target: this.element as HTMLElement,
-          props: {
-            plugin
-          }
-        }) as unknown as AppApi & { $destroy(): void };
+        const app = plugin.mountApp(this.element as HTMLElement);
         plugin.apps.add(app);
         plugin.customApps.set(this, app);
       },
@@ -74,11 +75,17 @@ export default class SiYuanCardNote extends Plugin {
   }
 
   onunload(): void {
+    this.destroyMobileDialog();
     this.apps.clear();
     this.customApps = new WeakMap();
   }
 
   private async openCardNote(): Promise<void> {
+    if (this.isMobile) {
+      this.openCardNoteDialog();
+      return;
+    }
+
     await openTab({
       app: this.app,
       custom: {
@@ -88,6 +95,59 @@ export default class SiYuanCardNote extends Plugin {
         data: {}
       }
     });
+  }
+
+  private mountApp(target: HTMLElement): AppApi & { $destroy(): void } {
+    return new App({
+      target,
+      props: {
+        plugin: this
+      }
+    }) as unknown as AppApi & { $destroy(): void };
+  }
+
+  private openCardNoteDialog(): void {
+    this.destroyMobileDialog();
+
+    const dialog = new Dialog({
+      title: this.displayName || "CardNote",
+      content: '<div class="scn-mobile-dialog"></div>',
+      width: "100vw",
+      height: "100vh",
+      destroyCallback: () => {
+        this.destroyMobileDialog(false);
+      }
+    });
+    const target = dialog.element.querySelector(".scn-mobile-dialog");
+    if (!(target instanceof HTMLElement)) {
+      dialog.destroy();
+      showMessage("CardNote 移动端容器初始化失败", 3000, "error");
+      return;
+    }
+    target.parentElement?.classList.add("scn-mobile-dialog-host");
+
+    const app = this.mountApp(target);
+    this.mobileDialog = dialog;
+    this.mobileDialogApp = app;
+    this.apps.add(app);
+  }
+
+  private destroyMobileDialog(destroyDialog = true): void {
+    const app = this.mobileDialogApp;
+    this.mobileDialogApp = undefined;
+    if (app) {
+      try {
+        app.$destroy();
+      } finally {
+        this.apps.delete(app);
+      }
+    }
+
+    const dialog = this.mobileDialog;
+    this.mobileDialog = undefined;
+    if (destroyDialog) {
+      dialog?.destroy();
+    }
   }
 
   private async refreshApps(): Promise<void> {

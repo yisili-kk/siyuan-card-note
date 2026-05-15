@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Plugin } from "siyuan";
-  import { confirm, openTab, showMessage } from "siyuan";
+  import { confirm, getFrontend, openMobileFileById, openTab, showMessage } from "siyuan";
   import CaptureBox from "./components/CaptureBox.svelte";
   import CardDetail from "./components/CardDetail.svelte";
   import CardList from "./components/CardList.svelte";
@@ -22,6 +22,8 @@
   export let plugin: Plugin;
 
   const api = new SiYuanApi();
+  const frontend = getFrontend();
+  const isMobile = frontend === "mobile" || frontend === "browser-mobile";
 
   interface AutoSyncSummary {
     cards: CardNote[];
@@ -612,6 +614,11 @@
       }
 
       detailCard = undefined;
+      if (isMobile) {
+        editingCard = undefined;
+        openMobileFileById(plugin.app, targetCard.boundBlockId, ["cb-get-focus"]);
+        return;
+      }
       editingCard = targetCard;
     } catch (err) {
       reportError(err);
@@ -635,6 +642,10 @@
       return;
     }
     editingCard = undefined;
+    if (isMobile) {
+      openMobileFileById(plugin.app, target.boundBlockId, ["cb-get-focus"]);
+      return;
+    }
     await openTab({
       app: plugin.app,
       doc: {
