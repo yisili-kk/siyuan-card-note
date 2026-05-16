@@ -2,6 +2,8 @@ import type { CardNote, CardSortMode, CardStatusFilter, CardTimeFilter } from ".
 
 const TAG_CONTROL_CHARS = /[\u200B-\u200D\uFEFF]/g;
 const HASH_TAG = /(^|[\s\u200B-\u200D\uFEFF])#([^\s#，。！？；：,.!?;:]+)([，。！？；：,.!?;:]?)(?=\s|$)/gu;
+const MARKDOWN_IMAGE = /!\[[^\]]*\]\([^)]+\)|<img\b[^>]*>/iu;
+const MARKDOWN_LINK = /(^|[^!])\[[^\]]+\]\([^)]+\)|https?:\/\/[^\s)]+|siyuan:\/\/[^\s)]+/iu;
 
 export function stripTagControlChars(value: string): string {
   return value.replace(TAG_CONTROL_CHARS, "");
@@ -142,6 +144,15 @@ function matchStatus(card: CardNote, status: CardStatusFilter): boolean {
   }
   if (status === "pinned") {
     return card.pinned;
+  }
+  if (status === "untagged") {
+    return getCardTags(card).length === 0;
+  }
+  if (status === "hasImage") {
+    return MARKDOWN_IMAGE.test(`${card.title || ""}\n${card.content}`);
+  }
+  if (status === "hasLink") {
+    return MARKDOWN_LINK.test(`${card.title || ""}\n${card.content}`);
   }
   return true;
 }

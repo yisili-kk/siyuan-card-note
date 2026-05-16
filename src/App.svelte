@@ -463,6 +463,15 @@
     });
   }
 
+  function openRandomCard() {
+    const pool = filteredCards.length > 0 ? filteredCards : cards;
+    if (pool.length === 0) {
+      showMessage("还没有可以漫步的卡片", 3000);
+      return;
+    }
+    detailCard = pool[Math.floor(Math.random() * pool.length)];
+  }
+
   function reportError(err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     error = message;
@@ -841,7 +850,6 @@
     {tags}
     {cards}
     total={cards.length}
-    filtered={filteredCards.length}
     settingsOpen={showSettings}
     {statusFilter}
     {timeFilter}
@@ -853,6 +861,7 @@
     on:closeSettings={() => showSettings = false}
     on:renameTag={renameTag}
     on:deleteTag={deleteTag}
+    on:randomCard={openRandomCard}
   />
 
   <main class="scn-main">

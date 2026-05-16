@@ -57,6 +57,30 @@ assert.deepEqual(
   ], "", "Tag", "all", "all", "createdAsc").map((card) => card.id),
   ["1"]
 );
+assert.deepEqual(
+  filterCards([
+    { id: "1", title: "", content: "#Tag/选题 A", tags: [], createdAt: 1, updatedAt: 1, pinned: false },
+    { id: "2", title: "", content: "没有标签", tags: [], createdAt: 2, updatedAt: 2, pinned: false },
+    { id: "3", title: "#标题标签", content: "正文", tags: [], createdAt: 3, updatedAt: 3, pinned: false }
+  ], "", "", "untagged", "all", "createdAsc").map((card) => card.id),
+  ["2"]
+);
+assert.deepEqual(
+  filterCards([
+    { id: "1", title: "", content: "图片 ![alt](assets/a.png)", tags: [], createdAt: 1, updatedAt: 1, pinned: false },
+    { id: "2", title: "", content: "链接 [site](https://example.com)", tags: [], createdAt: 2, updatedAt: 2, pinned: false },
+    { id: "3", title: "", content: "普通文本", tags: [], createdAt: 3, updatedAt: 3, pinned: false }
+  ], "", "", "hasImage", "all", "createdAsc").map((card) => card.id),
+  ["1"]
+);
+assert.deepEqual(
+  filterCards([
+    { id: "1", title: "", content: "图片 ![alt](assets/a.png)", tags: [], createdAt: 1, updatedAt: 1, pinned: false },
+    { id: "2", title: "", content: "链接 [site](https://example.com)", tags: [], createdAt: 2, updatedAt: 2, pinned: false },
+    { id: "3", title: "", content: "https://example.com", tags: [], createdAt: 3, updatedAt: 3, pinned: false }
+  ], "", "", "hasLink", "all", "createdAsc").map((card) => card.id),
+  ["2", "3"]
+);
 
 assert.deepEqual(
   parseDailyBlock(`{: id="20260501183204-mucmloq" updated="20260501183204"}2026-04-30 17:00:43 测试标题

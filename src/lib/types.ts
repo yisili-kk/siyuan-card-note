@@ -55,7 +55,7 @@ export interface CardFilter {
   time: CardTimeFilter;
 }
 
-export type CardStatusFilter = "all" | "synced" | "unsynced" | "error" | "pinned";
+export type CardStatusFilter = "all" | "synced" | "unsynced" | "error" | "pinned" | "untagged" | "hasImage" | "hasLink";
 export type CardTimeFilter = "all" | "today" | "7d" | "30d";
 export type CardSortMode = "createdDesc" | "createdAsc" | "updatedDesc" | "updatedAsc" | "pinned";
 
