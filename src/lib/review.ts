@@ -4,6 +4,8 @@ export type ReviewAction = "reviewed" | "later" | "dismissToday";
 
 const DAY = 24 * 60 * 60 * 1000;
 const REVIEW_INTERVAL_DAYS = [1, 3, 7, 14, 30, 60];
+const UNHANDLED_RESHOW_COOLDOWN_DAYS = 3;
+const RECENTLY_SHOWN_PENALTY_PER_DAY = 80;
 const MAX_DAILY_RECORDS = 21;
 
 export interface DailyReviewDraft {
@@ -38,6 +40,7 @@ export function ensureDailyReview(cards: CardNote[], state: ReviewState, setting
   const existing = nextState.daily[date];
   if (existing) {
     const normalized = trimRecord(normalizeRecord(existing, cardIds), limit);
+    let todayRecord = normalized;
     const shouldRefill = normalized.cardIds.length < limit;
     if (!sameRecord(existing, normalized)) {
       nextState.daily[date] = normalized;
@@ -49,16 +52,22 @@ export function ensureDailyReview(cards: CardNote[], state: ReviewState, setting
         nextState.daily[date] = filled;
         changed = true;
       }
+      todayRecord = filled;
+    }
+    if (markReviewRecordShown(nextState, todayRecord, now)) {
+      changed = true;
     }
     return { state: nextState, changed };
   }
 
-  nextState.daily[date] = fillDailyRecord({
+  const todayRecord = fillDailyRecord({
     date,
     cardIds: [],
     completedIds: [],
     dismissedIds: []
   }, cards, nextState, limit, now);
+  nextState.daily[date] = todayRecord;
+  markReviewRecordShown(nextState, todayRecord, now);
   changed = true;
   return { state: nextState, changed };
 }
@@ -141,6 +150,7 @@ export function applyReviewAction(state: ReviewState, cardId: string, action: Re
 
   nextState.cards[cardId] = {
     ...meta,
+    skippedAt: now,
     dismissedDate: date
   };
   nextState.daily[date] = {
@@ -228,7 +238,49 @@ function scoreCard(card: CardNote, state: ReviewState, now: number): number {
   const ageDays = Math.max(0, Math.floor((now - card.createdAt) / DAY));
   const reviewAgeDays = meta?.lastReviewedAt ? Math.floor((now - meta.lastReviewedAt) / DAY) : ageDays + 2;
   const overdueDays = meta?.nextReviewAt ? Math.max(0, Math.floor((now - meta.nextReviewAt) / DAY)) : 0;
-  return reviewAgeDays * 8 + overdueDays * 4 + (card.pinned ? 18 : 0) + Math.min(ageDays, 30) + (meta?.priority || 0);
+  return reviewAgeDays * 8 + overdueDays * 4 + (card.pinned ? 18 : 0) + Math.min(ageDays, 30) + (meta?.priority || 0) - recentlyShownPenalty(meta, now);
+}
+
+function markReviewRecordShown(state: ReviewState, record: DailyReviewRecord, now: number): boolean {
+  const hiddenIds = new Set([...record.completedIds, ...record.dismissedIds]);
+  return markReviewCardsShown(state, record.cardIds.filter((id) => !hiddenIds.has(id)), now);
+}
+
+function markReviewCardsShown(state: ReviewState, cardIds: string[], now: number): boolean {
+  const today = startOfDay(now);
+  let changed = false;
+  for (const cardId of cardIds) {
+    const meta = state.cards[cardId] || {
+      cardId,
+      reviewCount: 0
+    };
+    if (meta.lastShownAt && meta.lastShownAt >= today) {
+      continue;
+    }
+    state.cards[cardId] = {
+      ...meta,
+      lastShownAt: now
+    };
+    changed = true;
+  }
+  return changed;
+}
+
+function recentlyShownPenalty(meta: ReviewState["cards"][string] | undefined, now: number): number {
+  if (!meta?.lastShownAt) {
+    return 0;
+  }
+  if (meta.lastReviewedAt && meta.lastReviewedAt >= meta.lastShownAt) {
+    return 0;
+  }
+  if (meta.skippedAt && meta.skippedAt >= meta.lastShownAt) {
+    return 0;
+  }
+  const daysSinceShown = Math.max(0, Math.floor((startOfDay(now) - startOfDay(meta.lastShownAt)) / DAY));
+  if (daysSinceShown >= UNHANDLED_RESHOW_COOLDOWN_DAYS) {
+    return 0;
+  }
+  return (UNHANDLED_RESHOW_COOLDOWN_DAYS - daysSinceShown) * RECENTLY_SHOWN_PENALTY_PER_DAY;
 }
 
 function cleanupReviewState(state: ReviewState, cardIds: Set<string>, now: number): boolean {

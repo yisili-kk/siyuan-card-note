@@ -191,6 +191,7 @@ function normalizeReviewState(value: unknown): ReviewState {
     cards[cardId] = {
       cardId,
       lastReviewedAt: typeof meta.lastReviewedAt === "number" ? meta.lastReviewedAt : undefined,
+      lastShownAt: typeof meta.lastShownAt === "number" ? meta.lastShownAt : undefined,
       nextReviewAt: typeof meta.nextReviewAt === "number" ? meta.nextReviewAt : undefined,
       reviewCount: typeof meta.reviewCount === "number" ? Math.max(0, Math.round(meta.reviewCount)) : 0,
       skippedAt: typeof meta.skippedAt === "number" ? meta.skippedAt : undefined,

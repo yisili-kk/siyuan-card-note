@@ -67,6 +67,7 @@ export interface CardNoteStorage {
 export interface CardReviewMeta {
   cardId: string;
   lastReviewedAt?: number;
+  lastShownAt?: number;
   nextReviewAt?: number;
   reviewCount: number;
   skippedAt?: number;
