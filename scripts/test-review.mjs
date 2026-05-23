@@ -73,6 +73,38 @@ const stableDraft = ensureDailyReview(cards, draft.state, settings, now);
 assert.equal(stableDraft.changed, false);
 assert.deepEqual(getDailyReviewCards(cards, stableDraft.state, settings, now).map((card) => card.id), ["old-pinned", "old"]);
 
+const legacyState = createEmptyReviewState();
+legacyState.daily["2026-05-03"] = {
+  date: "2026-05-03",
+  cardIds: ["old-pinned", "old"],
+  completedIds: [],
+  dismissedIds: []
+};
+const legacyDraft = ensureDailyReview(cards, legacyState, settings, now);
+assert.equal(legacyDraft.changed, true);
+assert.ok(legacyDraft.state.cards["old-pinned"].lastShownAt >= now);
+assert.ok(legacyDraft.state.cards.old.lastShownAt >= now);
+
+const nextDay = now + 24 * 60 * 60 * 1000;
+const nextDayCards = [
+  ...cards,
+  {
+    id: "today-alt",
+    title: "另一个昨日卡",
+    content: "昨天没来得及看",
+    tags: [],
+    createdAt: today,
+    updatedAt: today,
+    pinned: false
+  }
+];
+const nextDayDraft = ensureDailyReview(nextDayCards, draft.state, settings, nextDay);
+assert.deepEqual(getDailyReviewCards(nextDayCards, nextDayDraft.state, settings, nextDay).map((card) => card.id), ["today", "today-alt"]);
+
+const laterState = applyReviewAction(draft.state, "old-pinned", "later", now);
+const laterDraft = ensureDailyReview(nextDayCards, laterState, settings, nextDay);
+assert.deepEqual(getDailyReviewCards(nextDayCards, laterDraft.state, settings, nextDay).map((card) => card.id), ["old-pinned", "today"]);
+
 let reviewedState = applyReviewAction(draft.state, "old-pinned", "reviewed", now);
 assert.deepEqual(getDailyReviewCards(cards, reviewedState, settings, now).map((card) => card.id), ["old"]);
 assert.deepEqual(getDailyReviewProgress(reviewedState, now), { total: 2, completed: 1 });

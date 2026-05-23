@@ -8,7 +8,6 @@
   export let tags: string[] = [];
   export let cards: CardNote[] = [];
   export let total = 0;
-  export let filtered = 0;
   export let settingsOpen = false;
   export let statusFilter: CardStatusFilter = "all";
   export let timeFilter: CardTimeFilter = "all";
@@ -22,6 +21,7 @@
     closeSettings: void;
     renameTag: { from: string; to: string };
     deleteTag: string;
+    randomCard: void;
   }>();
 
   let openTagMenu = "";
@@ -41,24 +41,21 @@
     cardIds: Set<string>;
   }
 
-  const statusItems: Array<{ value: CardStatusFilter; label: string }> = [
-    { value: "all", label: "全部" },
-    { value: "synced", label: "已同步" },
-    { value: "unsynced", label: "未同步" },
-    { value: "error", label: "异常" },
-    { value: "pinned", label: "置顶" }
-  ];
-
-  const timeItems: Array<{ value: CardTimeFilter; label: string }> = [
-    { value: "all", label: "不限" },
-    { value: "today", label: "今天" },
-    { value: "7d", label: "7 天" },
-    { value: "30d", label: "30 天" }
+  const searchItems: Array<{ value: CardStatusFilter; label: string; icon: string }> = [
+    { value: "untagged", label: "无标签", icon: "◇" },
+    { value: "hasImage", label: "有图片", icon: "▧" },
+    { value: "hasLink", label: "有链接", icon: "∞" }
   ];
 
   $: heatmapCells = buildHeatmapCells(cards);
+  $: heatmapMonths = buildHeatmapMonths();
   $: activeDays = countCardDays(cards);
   $: tagRows = flattenTagTree(buildTagTree(tags, cards), collapsedTags);
+
+  function heatmapStart() {
+    const today = startOfDay(Date.now());
+    return startOfWeek(today) - (heatmapWeeks - 1) * daysPerWeek * 24 * 60 * 60 * 1000;
+  }
 
   function buildHeatmapCells(cardList: CardNote[]) {
     const counts = new Map<string, number>();
@@ -68,7 +65,7 @@
     }
 
     const today = startOfDay(Date.now());
-    const firstWeekStart = startOfWeek(today) - (heatmapWeeks - 1) * daysPerWeek * 24 * 60 * 60 * 1000;
+    const firstWeekStart = heatmapStart();
     const cells = [];
 
     for (let week = 0; week < heatmapWeeks; week += 1) {
@@ -87,6 +84,27 @@
     }
 
     return cells;
+  }
+
+  function buildHeatmapMonths() {
+    const firstWeekStart = heatmapStart();
+    const labels = [];
+    for (let week = 0; week < heatmapWeeks; week += 1) {
+      const weekStart = firstWeekStart + week * daysPerWeek * 24 * 60 * 60 * 1000;
+      let monthTime = week === 0 ? weekStart : 0;
+      for (let weekday = 0; weekday < daysPerWeek; weekday += 1) {
+        const time = weekStart + weekday * 24 * 60 * 60 * 1000;
+        if (new Date(time).getDate() === 1) {
+          monthTime = time;
+          break;
+        }
+      }
+      labels.push({
+        week,
+        label: monthTime ? formatMonth(monthTime) : ""
+      });
+    }
+    return labels;
   }
 
   function countCardDays(cardList: CardNote[]) {
@@ -120,6 +138,11 @@
     return `${date.getMonth() + 1} 月 ${date.getDate()} 日`;
   }
 
+  function formatMonth(time: number) {
+    const date = new Date(time);
+    return `${date.getMonth() + 1} 月`;
+  }
+
   function heatmapLevel(count: number) {
     if (count >= 8) {
       return 4;
@@ -136,9 +159,34 @@
     return 0;
   }
 
+  function clearTagAndSettings() {
+    openTagMenu = "";
+    editingTag = "";
+    dispatch("selectTag", "");
+    dispatch("closeSettings");
+  }
+
+  function showAllCards() {
+    clearTagAndSettings();
+    dispatch("status", "all");
+    dispatch("time", "all");
+  }
+
+  function showWeekCards() {
+    clearTagAndSettings();
+    dispatch("status", "all");
+    dispatch("time", "7d");
+  }
+
+  function selectSearchStatus(status: CardStatusFilter) {
+    clearTagAndSettings();
+    dispatch("status", status);
+  }
+
   function selectTag(tag: string) {
     openTagMenu = "";
     editingTag = "";
+    dispatch("status", "all");
     dispatch("selectTag", selectedTag === tag ? "" : tag);
     dispatch("closeSettings");
   }
@@ -242,20 +290,15 @@
 </script>
 
 <aside class="scn-sidebar">
-  <div class="scn-sidebar__head">
-    <div>
-      <strong>CardNote</strong>
-      <span>{filtered} / {total}</span>
-    </div>
+  <div class="scn-search-wrap">
+    <input
+      class="b3-text-field scn-search"
+      type="search"
+      placeholder="搜索卡片..."
+      value={keyword}
+      on:input={(event) => dispatch("search", event.currentTarget.value)}
+    />
   </div>
-
-  <input
-    class="b3-text-field scn-search"
-    type="search"
-    placeholder="搜索卡片..."
-    value={keyword}
-    on:input={(event) => dispatch("search", event.currentTarget.value)}
-  />
 
   <div class="scn-stats" aria-label="卡片统计">
     <div>
@@ -272,55 +315,48 @@
     </div>
   </div>
 
-  <div class="scn-heatmap" aria-label="最近卡片日期分布">
-    {#each heatmapCells as cell}
-      <span
-        class:scn-heatmap__hot={cell.count > 0}
-        class="scn-heatmap__level-{cell.level}"
-        data-tooltip={cell.label}
-        data-week={cell.week}
-        aria-label={cell.label}
-        title={cell.label}
-      ></span>
-    {/each}
-  </div>
-
-  <div class="scn-filter-chips" aria-label="状态筛选">
-    {#each statusItems as item}
-      <button
-        class:scn-filter-chip--active={statusFilter === item.value}
-        type="button"
-        on:click={() => dispatch("status", item.value)}
-      >
-        {item.label}
-      </button>
-    {/each}
-  </div>
-
-  <div class="scn-filter-chips" aria-label="时间筛选">
-    {#each timeItems as item}
-      <button
-        class:scn-filter-chip--active={timeFilter === item.value}
-        type="button"
-        on:click={() => dispatch("time", item.value)}
-      >
-        {item.label}
-      </button>
-    {/each}
+  <div class="scn-heatmap-wrap">
+    <div class="scn-heatmap" aria-label="最近卡片日期分布">
+      {#each heatmapCells as cell}
+        <span
+          class:scn-heatmap__hot={cell.count > 0}
+          class="scn-heatmap__level-{cell.level}"
+          data-tooltip={cell.label}
+          data-week={cell.week}
+          aria-label={cell.label}
+          title={cell.label}
+        ></span>
+      {/each}
+    </div>
+    <div class="scn-heatmap-months" aria-hidden="true">
+      {#each heatmapMonths as month}
+        <span data-week={month.week}>{month.label}</span>
+      {/each}
+    </div>
   </div>
 
   <div class="scn-nav">
     <button
-      class:scn-active={!selectedTag && !settingsOpen}
+      class:scn-active={!selectedTag && !settingsOpen && statusFilter === "all" && timeFilter === "all"}
       class="scn-nav__item"
       type="button"
-      on:click={() => {
-        dispatch("selectTag", "");
-        dispatch("closeSettings");
-      }}
+      on:click={showAllCards}
     >
       <span>▦</span>
       全部笔记
+    </button>
+    <button
+      class:scn-active={!selectedTag && !settingsOpen && statusFilter === "all" && timeFilter === "7d"}
+      class="scn-nav__item"
+      type="button"
+      on:click={showWeekCards}
+    >
+      <span>◉</span>
+      本周记录
+    </button>
+    <button class="scn-nav__item" type="button" on:click={() => dispatch("randomCard")}>
+      <span>⌘</span>
+      随机漫步
     </button>
     <button
       class:scn-active={settingsOpen}
@@ -331,6 +367,21 @@
       <span>⚙</span>
       设置
     </button>
+  </div>
+
+  <div class="scn-sidebar__section">检索式</div>
+  <div class="scn-nav scn-nav--compact">
+    {#each searchItems as item}
+      <button
+        class:scn-active={!settingsOpen && !selectedTag && statusFilter === item.value}
+        class="scn-nav__item"
+        type="button"
+        on:click={() => selectSearchStatus(item.value)}
+      >
+        <span>{item.icon}</span>
+        {item.label}
+      </button>
+    {/each}
   </div>
 
   <div class="scn-sidebar__section">全部标签</div>

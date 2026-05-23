@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Plugin } from "siyuan";
-  import { confirm, openTab, showMessage } from "siyuan";
+  import { confirm, getFrontend, openMobileFileById, openTab, showMessage } from "siyuan";
   import CaptureBox from "./components/CaptureBox.svelte";
   import CardDetail from "./components/CardDetail.svelte";
   import CardList from "./components/CardList.svelte";
@@ -22,6 +22,8 @@
   export let plugin: Plugin;
 
   const api = new SiYuanApi();
+  const frontend = getFrontend();
+  const isMobile = frontend === "mobile" || frontend === "browser-mobile";
 
   interface AutoSyncSummary {
     cards: CardNote[];
@@ -461,6 +463,15 @@
     });
   }
 
+  function openRandomCard() {
+    const pool = filteredCards.length > 0 ? filteredCards : cards;
+    if (pool.length === 0) {
+      showMessage("还没有可以漫步的卡片", 3000);
+      return;
+    }
+    detailCard = pool[Math.floor(Math.random() * pool.length)];
+  }
+
   function reportError(err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     error = message;
@@ -612,6 +623,11 @@
       }
 
       detailCard = undefined;
+      if (isMobile) {
+        editingCard = undefined;
+        openMobileFileById(plugin.app, targetCard.boundBlockId, ["cb-get-focus"]);
+        return;
+      }
       editingCard = targetCard;
     } catch (err) {
       reportError(err);
@@ -635,6 +651,10 @@
       return;
     }
     editingCard = undefined;
+    if (isMobile) {
+      openMobileFileById(plugin.app, target.boundBlockId, ["cb-get-focus"]);
+      return;
+    }
     await openTab({
       app: plugin.app,
       doc: {
@@ -830,7 +850,6 @@
     {tags}
     {cards}
     total={cards.length}
-    filtered={filteredCards.length}
     settingsOpen={showSettings}
     {statusFilter}
     {timeFilter}
@@ -842,6 +861,7 @@
     on:closeSettings={() => showSettings = false}
     on:renameTag={renameTag}
     on:deleteTag={deleteTag}
+    on:randomCard={openRandomCard}
   />
 
   <main class="scn-main">
